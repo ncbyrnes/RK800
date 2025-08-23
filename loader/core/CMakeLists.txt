@@ -1,1 +1,0 @@
-target_sources(${LOADER} PRIVATE common.c)
