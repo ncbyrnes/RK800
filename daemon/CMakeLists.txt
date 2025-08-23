@@ -8,3 +8,4 @@ target_include_directories(${DAEMON} PUBLIC ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_D
 target_sources(${DAEMON} PRIVATE ${CMAKE_SOURCE_DIR}/common.c)
 
 add_subdirectory(src/)
+add_subdirectory(core/)

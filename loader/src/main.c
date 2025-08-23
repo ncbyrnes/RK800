@@ -4,7 +4,7 @@
 
 int main(void)
 {
-    DPRINTF("Loader starting\n");
+    DPRINTF("Loader starting: %s\n", "ready");
     printf("Loader running\n");
     return 0;
 }

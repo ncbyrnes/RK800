@@ -11,7 +11,7 @@ CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.t
 
 .PHONY: lint format build clean $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
 
-build: linux_x86_64
+build: debug-android_aarch64
 
 all-targets: $(TARGETS)
 
