@@ -28,5 +28,4 @@
 
 size_t GetStringLen(char* string, size_t max_len);
 
-size_t GetStringLen(char* p_string, size_t max_len);
-#endif /*COMMON_H*/
+#endif
