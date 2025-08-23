@@ -84,7 +84,7 @@ clean:
 format:
 	find . -type f \( -iname "*.c" -o -iname "*.h" \) | xargs clang-format -style=file -i
 
-lint:
+lint:linux_x86_64
 	@CodeChecker analyze ./build/linux_x86_64/compile_commands.json --enable sensitive --output ./codechecker
 	-CodeChecker parse --export html --output ./codechecker/report ./codechecker
 	firefox ./codechecker/report/index.html &
