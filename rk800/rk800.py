@@ -9,7 +9,7 @@ def run():
         args = parse_args()
         handler = CommandHandler()
         handler.dispatch_command(args)
-        
+
     except KeyboardInterrupt:
         print("\nInterrupted")
     except FileNotFoundError as error:
