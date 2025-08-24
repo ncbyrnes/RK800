@@ -1,4 +1,4 @@
 target_sources(${DAEMON}
     PRIVATE
-        common.c
+        daemon_config.c
 )

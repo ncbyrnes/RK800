@@ -9,9 +9,13 @@ CMAKE_COMMON_ARGS = -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=/usr/bin/make
 CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.toolchain.cmake \
                      -DANDROID_NDK=$(ANDROID_NDK) -DANDROID_PLATFORM=android-21
 
-.PHONY: lint format build clean $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
+.PHONY: lint format build clean debug release $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
 
-build: linux_x86_64
+build: debug
+
+debug: debug-linux_x86_64 debug-android_aarch64 debug-android_arm32
+
+release: release-linux_x86_64 release-android_aarch64 release-android_arm32
 
 all-targets: $(TARGETS)
 
@@ -79,7 +83,7 @@ $(foreach proj,$(PROJECTS),$(foreach target,$(TARGETS),$(eval $(call PROJECT_TAR
 clean:
 	rm -rf build/
 	rm -rf codechecker/
-	rm -rf bin/*
+	rm -rf rk800/assets/*
 
 format:
 	find . -type f \( -iname "*.c" -o -iname "*.h" \) | xargs clang-format -style=file -i

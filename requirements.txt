@@ -1,1 +1,2 @@
 CodeChecker==6.23.1
+argcomplete>=3.6.2

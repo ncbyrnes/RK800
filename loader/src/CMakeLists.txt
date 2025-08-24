@@ -1,0 +1,1 @@
+target_sources(${LOADER} PRIVATE main.c)

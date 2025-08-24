@@ -2,3 +2,6 @@
 /build
 .vscode
 codechecker
+__pycache__
+*.pyc
+*.bin
