@@ -4,6 +4,7 @@ import cmd
 import argparse
 from pathlib import Path
 from importlib.resources import files
+from rk800.tls import TLSManager
 
 
 class RK800CLI(cmd.Cmd):
@@ -18,11 +19,12 @@ class RK800CLI(cmd.Cmd):
 
 class Configure:
     DAEMON_CANARY = b"\x41\x39\x31\x54\x21\xff\x3d\xc1\x7a\x45\x1b\x4e\x31\x5d\x36\xc1"
-    DAEMON_FORMAT = "!QQQ"
+    DAEMON_FORMAT = "!QQQ256s1024s1024s"
     SEC_IN_MIN = 60
 
     def __init__(self, binary_path: Path):
         self.binary_path = binary_path
+        self.tls_manager = TLSManager()
 
     def _pack_daemon_config(self, args: argparse.Namespace) -> bytes:
         import struct
@@ -30,11 +32,16 @@ class Configure:
         beacon_interval_seconds = args.beacon_interval * self.SEC_IN_MIN
         beacon_jitter_seconds = args.beacon_jitter * self.SEC_IN_MIN
         
+        client_certs = self.tls_manager.generate_client_cert()
+        
         return struct.pack(
             self.DAEMON_FORMAT,
             beacon_interval_seconds,
             beacon_jitter_seconds,
             args.connection_weight,
+            client_certs["tls_priv_key"].encode('utf-8'),
+            client_certs["tls_cert"].encode('utf-8'),
+            client_certs["tls_ca_cert"].encode('utf-8'),
         )
 
     def write_configured_binary(

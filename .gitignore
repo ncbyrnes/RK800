@@ -5,3 +5,4 @@ codechecker
 __pycache__
 *.pyc
 *.bin
+rk800keys.json
