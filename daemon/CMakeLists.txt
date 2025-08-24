@@ -1,4 +1,4 @@
-set(DAEMON "daemon-${TARGET_SUFFIX}")
+set(DAEMON "daemon_${TARGET_SUFFIX}.bin")
 
 set (DAEMON_FLAGS -Wall -Werror -Wextra -Wpedantic -Wconversion -Wunreachable-code -Os)
 

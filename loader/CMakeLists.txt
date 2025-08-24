@@ -1,4 +1,4 @@
-set(LOADER "loader-${TARGET_SUFFIX}")
+set(LOADER "loader_${TARGET_SUFFIX}.bin")
 
 set (LOADER_FLAGS -Wall -Werror -Wextra -Wpedantic -Wconversion -Wunreachable-code -Os)
 

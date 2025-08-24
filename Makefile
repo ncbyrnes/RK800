@@ -79,7 +79,7 @@ $(foreach proj,$(PROJECTS),$(foreach target,$(TARGETS),$(eval $(call PROJECT_TAR
 clean:
 	rm -rf build/
 	rm -rf codechecker/
-	rm -rf bin/*
+	rm -rf rk800/assets/*
 
 format:
 	find . -type f \( -iname "*.c" -o -iname "*.h" \) | xargs clang-format -style=file -i
