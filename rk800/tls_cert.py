@@ -14,6 +14,54 @@ class CertManager:
     CA_VALIDITY_DAYS = 3650  # 10 years
     CERT_VALIDITY_DAYS = 3650  # 10 years
 
+    def get_server_tls_config(self) -> dict:
+        config = self.load_or_create_tls_config()
+        return {
+            "server_key": config["server_key"],
+            "server_cert": config["server_cert"],
+            "ca_cert": config["ca_cert"],
+        }
+
+    def load_or_create_tls_config(self) -> dict:
+        path = Path.cwd() / self.TLS_CONFIG_FILE
+        if path.exists():
+            try:
+                with path.open("r", encoding="utf-8") as file:
+                    config = json.load(file)
+                if self._validate_ca_cert(config):
+                    return config
+                print("CA or server certificate expired or invalid, regenerating...")
+                path.unlink()
+            except (json.JSONDecodeError, KeyError, OSError):
+                print("Invalid TLS config file, regenerating...")
+                path.unlink(missing_ok=True)
+
+        config = self._generate_ca_keys_dict()
+        temp_path = path.with_suffix(".tmp")
+        with temp_path.open("w", encoding="utf-8") as file:
+            json.dump(config, file, indent=2)
+        os.chmod(temp_path, 0o600)
+        temp_path.replace(path)
+        print(f"Generated new CA certificate in {path}")
+        return config
+
+    def generate_client_cert(self) -> dict:
+        config = self.load_or_create_tls_config()
+        try:
+            ca_key_obj = serialization.load_pem_private_key(
+                config["ca_key"].encode(), password=None
+            )
+            ca_cert_obj = x509.load_pem_x509_certificate(config["ca_cert"].encode())
+        except (ValueError, TypeError) as error:
+            raise ValueError(f"Failed to load CA keys: {error}") from error
+
+        client_key, client_cert = self._generate_client_cert(ca_key_obj, ca_cert_obj)
+        return {
+            "client_key": self._serialize_private_key(client_key),
+            "client_cert": self._serialize_certificate(client_cert),
+            "ca_cert": config["ca_cert"],
+        }
+
     def _now(self):
         return datetime.now(timezone.utc)
 
@@ -156,23 +204,6 @@ class CertManager:
             "server_cert": self._serialize_certificate(server_cert),
         }
 
-    def generate_client_cert(self) -> dict:
-        config = self.load_or_create_tls_config()
-        try:
-            ca_key_obj = serialization.load_pem_private_key(
-                config["ca_key"].encode(), password=None
-            )
-            ca_cert_obj = x509.load_pem_x509_certificate(config["ca_cert"].encode())
-        except (ValueError, TypeError) as error:
-            raise ValueError(f"Failed to load CA keys: {error}") from error
-
-        client_key, client_cert = self._generate_client_cert(ca_key_obj, ca_cert_obj)
-        return {
-            "client_key": self._serialize_private_key(client_key),
-            "client_cert": self._serialize_certificate(client_cert),
-            "ca_cert": config["ca_cert"],
-        }
-
     def _validate_ca_cert(self, config: dict) -> bool:
         try:
             required_keys = ["ca_cert", "ca_key", "server_cert", "server_key"]
@@ -196,34 +227,3 @@ class CertManager:
             return True
         except (ValueError, TypeError, KeyError):
             return False
-
-    def get_server_tls_config(self) -> dict:
-        config = self.load_or_create_tls_config()
-        return {
-            "server_key": config["server_key"],
-            "server_cert": config["server_cert"],
-            "ca_cert": config["ca_cert"],
-        }
-
-    def load_or_create_tls_config(self) -> dict:
-        path = Path.cwd() / self.TLS_CONFIG_FILE
-        if path.exists():
-            try:
-                with path.open("r", encoding="utf-8") as file:
-                    config = json.load(file)
-                if self._validate_ca_cert(config):
-                    return config
-                print("CA or server certificate expired or invalid, regenerating...")
-                path.unlink()
-            except (json.JSONDecodeError, KeyError, OSError):
-                print("Invalid TLS config file, regenerating...")
-                path.unlink(missing_ok=True)
-
-        config = self._generate_ca_keys_dict()
-        temp_path = path.with_suffix(".tmp")
-        with temp_path.open("w", encoding="utf-8") as file:
-            json.dump(config, file, indent=2)
-        os.chmod(temp_path, 0o600)
-        temp_path.replace(path)
-        print(f"Generated new CA certificate in {path}")
-        return config
