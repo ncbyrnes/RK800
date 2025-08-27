@@ -24,7 +24,19 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+        }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -32,7 +44,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.appcompat)
     implementation(libs.material)
     testImplementation(libs.junit)

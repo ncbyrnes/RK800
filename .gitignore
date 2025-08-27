@@ -7,3 +7,4 @@ __pycache__
 *.bin
 *.so
 rk800keys.json
+*.apk

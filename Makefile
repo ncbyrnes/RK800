@@ -9,7 +9,7 @@ CMAKE_COMMON_ARGS = -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=/usr/bin/make
 CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.toolchain.cmake \
                      -DANDROID_NDK=$(ANDROID_NDK) -DANDROID_PLATFORM=android-21
 
-.PHONY: lint format build clean debug release $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
+.PHONY: lint format apk build clean debug release $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
 
 build: debug
 
@@ -84,6 +84,13 @@ clean:
 	rm -rf build/
 	rm -rf codechecker/
 	rm -rf rk800/assets/*
+	./loader/gradlew -p loader clean
+
+apk: release-android_aarch64
+	ls -t rk800/assets/daemon_android_aarch64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
+	./loader/gradlew -p loader clean assembleRelease
+	find loader -type f -name "*.apk" -exec cp -v {} rk800/assets/ \;
+
 
 format:
 	find . -type f \( -iname "*.c" -o -iname "*.h" \) | xargs clang-format -style=file -i
