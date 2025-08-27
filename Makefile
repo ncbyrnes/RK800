@@ -1,5 +1,5 @@
 TARGETS = android_aarch64 android_arm32 linux_x86_64
-PROJECTS = loader daemon
+PROJECTS = daemon
 ANDROID_NDK = /opt/cross/android-ndk-r28c-linux/android-ndk-r28c
 
 android_aarch64_ABI = arm64-v8a

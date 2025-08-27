@@ -79,7 +79,7 @@ class CommandHandler:
         assets_dir = files("rk800").joinpath("assets")
         assets_path = Path(assets_dir).resolve()
 
-        pattern = f"{project}_*{arch}*.bin"
+        pattern = f"{project}_*{arch}*.so"
         matches = list(assets_path.glob(pattern))
 
         if matches:
