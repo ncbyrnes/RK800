@@ -9,12 +9,15 @@
 #define TLS_PRIV_KEY_SIZE (256)
 #define TLS_CERT_SIZE (1024)
 #define TLS_CA_CERT_SIZE (1024)
+#define ADDR_LEN (256) //arbitrary to allow for like domain.net/whatever
 
 typedef struct __attribute__((__packed__)) daemon_config
 {
+    uint16_t port;
     uint64_t beacon_interval;
     uint64_t beacon_jitter;
     uint64_t connection_weight;
+    char address [ADDR_LEN];
     char tls_priv_key[TLS_PRIV_KEY_SIZE];
     char tls_cert[TLS_CERT_SIZE]; 
     char tls_ca_cert[TLS_CA_CERT_SIZE];

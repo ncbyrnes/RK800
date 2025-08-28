@@ -20,7 +20,7 @@ def create_parser():
     # configure
     configure_parser = subparsers.add_parser("configure", help="configure RK800")
     configure_parser.add_argument(
-        "arch", choices=["arm32", "aarch64", "linux"], help="target architecture"
+        "arch", choices=["arm32", "aarch64"], help="target architecture"
     )
 
     configure_subparsers = configure_parser.add_subparsers(
@@ -53,6 +53,8 @@ def create_parser():
         default=0,
         help="commands per connection, default: 0 (no limit)",
     )
+    daemon_parser.add_argument("-a", "--address", type=str, required=True, help="REQUIRED: callback address")
+    daemon_parser.add_argument("-p", "--port", type=int, required=True, help="REQUIRED: callback port")
 
     # listen
     listen_parser = subparsers.add_parser("listen", help="start listening")

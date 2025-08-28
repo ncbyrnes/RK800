@@ -1,4 +1,4 @@
-TARGETS = android_aarch64 android_arm32 linux_x86_64
+TARGETS = android_aarch64 android_arm32
 PROJECTS = daemon
 ANDROID_NDK = /opt/cross/android-ndk-r28c-linux/android-ndk-r28c
 
@@ -13,9 +13,9 @@ CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.t
 
 build: debug
 
-debug: debug-linux_x86_64 debug-android_aarch64 debug-android_arm32
+debug: debug-android_aarch64 debug-android_arm32
 
-release: release-linux_x86_64 release-android_aarch64 release-android_arm32
+release: release-android_aarch64 release-android_arm32
 
 all-targets: $(TARGETS)
 
