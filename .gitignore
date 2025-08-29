@@ -8,3 +8,11 @@ __pycache__
 *.so
 rk800keys.json
 *.apk
+*.xml
+*.dex
+*.arsc
+META-INF
+kotlin
+assets
+res
+loader/.idea

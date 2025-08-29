@@ -30,10 +30,10 @@ class CertManager:
                     config = json.load(file)
                 if self._validate_ca_cert(config):
                     return config
-                print("CA or server certificate expired or invalid, regenerating...")
+                print("CA or server certificate expired or invalid, regenerating")
                 path.unlink()
             except (json.JSONDecodeError, KeyError, OSError):
-                print("Invalid TLS config file, regenerating...")
+                print("Invalid TLS config file, regenerating")
                 path.unlink(missing_ok=True)
 
         config = self._generate_ca_keys_dict()

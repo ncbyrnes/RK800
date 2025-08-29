@@ -17,44 +17,38 @@ def create_parser():
 
     subparsers = parser.add_subparsers(dest="command", help="available commands")
 
-    # configure
-    configure_parser = subparsers.add_parser("configure", help="configure RK800")
+    # configure daemon
+    configure_parser = subparsers.add_parser("configure", help="configure daemon")
     configure_parser.add_argument(
         "arch", choices=["arm32", "aarch64"], help="target architecture"
     )
-
-    configure_subparsers = configure_parser.add_subparsers(
-        dest="project", help="project to configure"
-    )
-
-    # loader
-    loader_parser = configure_subparsers.add_parser("loader", help="configure loader")
-
-    # daemon
-    daemon_parser = configure_subparsers.add_parser("daemon", help="configure daemon")
-    daemon_parser.add_argument(
+    configure_parser.add_argument(
         "-i",
         "--beacon-interval",
         type=int,
         default=120,
         help="beacon interval in minutes, default: 120",
     )
-    daemon_parser.add_argument(
+    configure_parser.add_argument(
         "-j",
         "--beacon-jitter",
         type=int,
         default=60,
         help="beacon jitter in minutes, default: 60",
     )
-    daemon_parser.add_argument(
+    configure_parser.add_argument(
         "-w",
         "--connection-weight",
         type=int,
         default=0,
         help="commands per connection, default: 0 (no limit)",
     )
-    daemon_parser.add_argument("-a", "--address", type=str, required=True, help="REQUIRED: callback address")
-    daemon_parser.add_argument("-p", "--port", type=int, required=True, help="REQUIRED: callback port")
+    configure_parser.add_argument(
+        "-a", "--address", type=str, required=True, help="REQUIRED: callback address"
+    )
+    configure_parser.add_argument(
+        "-p", "--port", type=int, required=True, help="REQUIRED: callback port"
+    )
 
     # listen
     listen_parser = subparsers.add_parser("listen", help="start listening")

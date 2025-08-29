@@ -9,7 +9,7 @@ CMAKE_COMMON_ARGS = -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=/usr/bin/make
 CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.toolchain.cmake \
                      -DANDROID_NDK=$(ANDROID_NDK) -DANDROID_PLATFORM=android-21
 
-.PHONY: lint format apk build clean debug release $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
+.PHONY: lint format apk build clean debug release keystore $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
 
 build: debug
 
@@ -86,9 +86,17 @@ clean:
 	rm -rf rk800/assets/*
 	./loader/gradlew -p loader clean
 
-apk: release-android_aarch64
+keystore:
+	@if [ ! -f rk800/assets/debug.keystore ]; then \
+		keytool -genkeypair -v -keystore rk800/assets/debug.keystore \
+		-alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+		-storepass android -keypass android \
+		-dname "CN=Android Debug,O=Android,C=US"; \
+	fi
+
+apk: release-android_aarch64 keystore
 	ls -t rk800/assets/daemon_android_aarch64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
-	./loader/gradlew -p loader clean assembleRelease
+	./loader/gradlew -p loader clean assembleRelease --stacktrace
 	find loader -type f -name "*.apk" -exec cp -v {} rk800/assets/ \;
 
 
@@ -99,3 +107,6 @@ lint:linux_x86_64
 	@CodeChecker analyze ./build/linux_x86_64/compile_commands.json --enable sensitive --output ./codechecker
 	-CodeChecker parse --export html --output ./codechecker/report ./codechecker
 	firefox ./codechecker/report/index.html &
+
+wheel: release apk
+	python3 -m build --wheel
