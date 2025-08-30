@@ -28,7 +28,7 @@ class CommandHandler:
         assets_dir = files("rk800").joinpath("assets")
         assets_path = Path(assets_dir).resolve()
 
-        pattern = f"daemon_*{arch}*.so"
+        pattern = f"client_*{arch}*.so"
         matches = list(assets_path.glob(pattern))
 
         if matches:

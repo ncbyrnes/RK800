@@ -20,13 +20,13 @@ sudo ./cross_comp.sh
 
 *Make targets*
 ```bash 
-all-targets                     daemon-android_arm32            debug-android_arm32
-android_aarch64                 daemon-debug-android_aarch64    format
-android_arm32                   daemon-debug-android_arm32      lint
-apk                             daemon-release-android_aarch64  release
-build                           daemon-release-android_arm32    release-android_aarch64
+all-targets                     client-android_arm32            debug-android_arm32
+android_aarch64                 client-debug-android_aarch64    format
+android_arm32                   client-debug-android_arm32      lint
+apk                             client-release-android_aarch64  release
+build                           client-release-android_arm32    release-android_aarch64
 clean                           debug                           release-android_arm32
-daemon-android_aarch64          debug-android_aarch64           wheel
+client-android_aarch64          debug-android_aarch64           wheel
 
 ```
 

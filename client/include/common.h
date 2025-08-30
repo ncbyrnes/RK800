@@ -5,16 +5,16 @@
 #include <string.h>
 
 #ifndef NDEBUG
-#define DPRINTF(fmt, ...)                        \
-    do                                           \
-    {                                            \
-        (void)fprintf(stderr, fmt, __VA_ARGS__); \
+#define DPRINTF(...) \
+    do \
+    { \
+        (void)fprintf(stderr, __VA_ARGS__); \
     } while (0)
 
 #else
-#define DPRINTF(fmt, ...) \
-    do                    \
-    {                     \
+#define DPRINTF(...) \
+    do \
+    { \
     } while (0)
 
 #endif

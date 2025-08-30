@@ -122,7 +122,7 @@ class CertManager:
 
     def _generate_client_cert(self, ca_key, ca_cert):
         client_key = ec.generate_private_key(ec.SECP256R1())
-        subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "DAEMON")])
+        subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "CLIENT")])
         now = self._now()
         builder = (
             x509.CertificateBuilder()

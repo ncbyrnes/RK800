@@ -1,13 +1,13 @@
-#include "daemon_config.h"
+#include "client_config.h"
 #include <endian.h>
 #include "common.h"
 
-int DecryptConfig(daemon_config_t* config);
-union daemon_config_union g_daemon_config = {.canary = CANARY_VALUE};
+int DecryptConfig(client_config_t* config);
+union client_config_union g_client_config = {.canary = CANARY_VALUE};
 
-daemon_config_t* GetDaemonConfig(void)
+client_config_t* GetClientConfig(void)
 {
-    daemon_config_t* config = &g_daemon_config.config;
+    client_config_t* config = &g_client_config.config;
 
     if (DecryptConfig(config))
     {
@@ -22,7 +22,7 @@ end:
     return config;
 }
 
-int DecryptConfig(daemon_config_t* config)
+int DecryptConfig(client_config_t* config)
 {
     int exit_code = EXIT_FAILURE;
     config->beacon_interval = be64toh(config->beacon_interval);

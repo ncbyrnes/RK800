@@ -30,7 +30,7 @@ static inline uint32_t obf_mix32(uint32_t x)
     return x;
 }
 #define OBF_SEED() ((uint32_t)(0x9E3779B9u ^ (uint32_t)__LINE__ ^ (uint32_t)__COUNTER__))
-#define OBF_KS_AT(seed, i) ((uint8_t)(obf_mix32((seed) + (uint32_t)(i) * 0x9E3779B9u) >> 24))
+#define OBF_KS_AT(seed, i) ((uint8_t)(obf_mix32((seed) + (uint32_t)(i)*0x9E3779B9u) >> 24))
 
 /* obfuscate N bytes from a string literal s with seed; produces a compound literal */
 #define OBF_ENC_BYTES_N(s, seed, N)                                      \

@@ -6,15 +6,15 @@ import struct
 
 
 class Configure:
-    DAEMON_CANARY = b"\x41\x39\x31\x54\x21\xff\x3d\xc1\x7a\x45\x1b\x4e\x31\x5d\x36\xc1"
-    DAEMON_FORMAT = "!HQQQ256s256s1024s1024s"
+    CLIENT_CANARY = b"\x41\x39\x31\x54\x21\xff\x3d\xc1\x7a\x45\x1b\x4e\x31\x5d\x36\xc1"
+    CLIENT_FORMAT = "!HQQQ256s256s1024s1024s"
     SEC_IN_MIN = 60
 
     def __init__(self, binary_path: Path):
         self.binary_path = binary_path
         self.cert_manager = CertManager()
 
-    def _pack_daemon_config(self, args: argparse.Namespace) -> bytes:
+    def _pack_client_config(self, args: argparse.Namespace) -> bytes:
 
         beacon_interval_seconds = args.beacon_interval * self.SEC_IN_MIN
         beacon_jitter_seconds = args.beacon_jitter * self.SEC_IN_MIN
@@ -22,7 +22,7 @@ class Configure:
         client_certs = self.cert_manager.generate_client_cert()
 
         return struct.pack(
-            self.DAEMON_FORMAT,
+            self.CLIENT_FORMAT,
             args.port,
             beacon_interval_seconds,
             beacon_jitter_seconds,
@@ -40,9 +40,9 @@ class Configure:
             data = bytearray(binary_file.read())
 
         if args and hasattr(args, "beacon_interval"):
-            canary_index = data.find(self.DAEMON_CANARY)
+            canary_index = data.find(self.CLIENT_CANARY)
             if canary_index != -1:
-                packed_config = self._pack_daemon_config(args)
+                packed_config = self._pack_client_config(args)
                 data[canary_index : canary_index + len(packed_config)] = packed_config
 
         is_64 = "aarch64" in str(self.binary_path)

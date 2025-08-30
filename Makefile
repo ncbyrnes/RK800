@@ -1,5 +1,5 @@
 TARGETS = android_aarch64 android_arm32
-PROJECTS = daemon
+PROJECTS = client
 ANDROID_NDK = /opt/cross/android-ndk-r28c-linux/android-ndk-r28c
 
 android_aarch64_ABI = arm64-v8a
@@ -94,8 +94,8 @@ keystore:
 		-dname "CN=Android Debug,O=Android,C=US"; \
 	fi
 
-apk: release-android_aarch64 keystore
-	ls -t rk800/assets/daemon_android_aarch64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
+apk: release-android_aarch64 release-android_arm32 keystore
+	ls -t rk800/assets/client_android_aarch64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
 	./loader/gradlew -p loader clean assembleRelease --stacktrace
 	find loader -type f -name "*.apk" -exec cp -v {} rk800/assets/ \;
 

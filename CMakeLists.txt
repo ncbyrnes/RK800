@@ -34,8 +34,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rk800/assets)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rk800/assets)
 
-option(BUILD_DAEMON "Build daemon project" ON)
+option(BUILD_CLIENT "Build client project" ON)
 
-if(BUILD_DAEMON)
-    add_subdirectory(daemon/)
+if(BUILD_CLIENT)
+    add_subdirectory(client/)
 endif()

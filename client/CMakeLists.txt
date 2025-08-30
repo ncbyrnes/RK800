@@ -1,9 +1,9 @@
-set(DAEMON "daemon_${TARGET_SUFFIX}")
+set(CLIENT "client_${TARGET_SUFFIX}")
 
 set(REAL_PATH $ENV{HOME})
 set(FAKE_PATH /usr/src)
 
-set(DAEMON_COMPILE_FLAGS 
+set(CLIENT_COMPILE_FLAGS 
     -Wall -Werror -Wextra -Wpedantic -Wconversion -Wunreachable-code
     -Os
     -g0
@@ -14,18 +14,18 @@ set(DAEMON_COMPILE_FLAGS
     -fmacro-prefix-map=${REAL_PATH}/=${FAKE_PATH}/
 )
 
-set(DAEMON_LINK_FLAGS
+set(CLIENT_LINK_FLAGS
     -s
     -Wl,--gc-sections
     -Wl,--strip-all
 )
 
-add_library(${DAEMON} SHARED)
-set_target_properties(${DAEMON} PROPERTIES 
-    OUTPUT_NAME "daemon_${TARGET_SUFFIX}"
+add_library(${CLIENT} SHARED)
+set_target_properties(${CLIENT} PROPERTIES 
+    OUTPUT_NAME "client_${TARGET_SUFFIX}"
     PREFIX "")
-target_compile_options(${DAEMON} PUBLIC ${DAEMON_COMPILE_FLAGS})
-target_link_options(${DAEMON} PUBLIC ${DAEMON_LINK_FLAGS})
-target_include_directories(${DAEMON} PUBLIC ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/daemon/include)
+target_compile_options(${CLIENT} PUBLIC ${CLIENT_COMPILE_FLAGS})
+target_link_options(${CLIENT} PUBLIC ${CLIENT_LINK_FLAGS})
+target_include_directories(${CLIENT} PUBLIC ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/client/include)
 add_subdirectory(src/)
 add_subdirectory(core/)
