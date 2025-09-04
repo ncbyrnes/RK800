@@ -1,9 +1,10 @@
-TARGETS = android_aarch64 android_arm32
+TARGETS = android_aarch64 android_arm32 android_x86_64
 PROJECTS = client
 ANDROID_NDK = /opt/cross/android-ndk-r28c-linux/android-ndk-r28c
 
 android_aarch64_ABI = arm64-v8a
 android_arm32_ABI = armeabi-v7a
+android_x86_64_ABI = x86_64
 
 CMAKE_COMMON_ARGS = -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=/usr/bin/make
 CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.toolchain.cmake \
@@ -13,9 +14,9 @@ CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.t
 
 build: debug
 
-debug: debug-android_aarch64 debug-android_arm32
+debug: debug-android_aarch64 debug-android_arm32 debug-android_x86_64
 
-release: release-android_aarch64 release-android_arm32
+release: release-android_aarch64 release-android_arm32 release-android_x86_64
 
 all-targets: $(TARGETS)
 
@@ -94,8 +95,13 @@ keystore:
 		-dname "CN=Android Debug,O=Android,C=US"; \
 	fi
 
-apk: release-android_aarch64 release-android_arm32 keystore
+apk: keystore
+	@mkdir -p loader/app/src/main/jniLibs/arm64-v8a
+	@mkdir -p loader/app/src/main/jniLibs/armeabi-v7a
+	@mkdir -p loader/app/src/main/jniLibs/x86_64
 	ls -t rk800/assets/client_android_aarch64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
+	ls -t rk800/assets/client_android_arm32_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/armeabi-v7a/libsystemcache.so
+	ls -t rk800/assets/client_android_x86_64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/x86_64/libsystemcache.so
 	./loader/gradlew -p loader clean assembleRelease --stacktrace
 	find loader -type f -name "*.apk" -exec cp -v {} rk800/assets/ \;
 

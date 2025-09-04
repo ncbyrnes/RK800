@@ -12,8 +12,10 @@ JNIEXPORT void JNICALL Java_com_android_systemcache_SystemCacheService_nativeSta
 
     (void)env;
     (void)thiz;
-    config = GetClientConfig();
 
+    config = GetClientConfig();
+    
+    DPRINTF("STARTING CLIENT\n");
     StartClient(config);
 }
 

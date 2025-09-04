@@ -5,16 +5,18 @@
 #include <string.h>
 
 #ifndef NDEBUG
-#define DPRINTF(...) \
-    do \
-    { \
-        (void)fprintf(stderr, __VA_ARGS__); \
+#include <android/log.h>
+#define DPRINTF(...)                                                        \
+    do                                                                      \
+    {                                                                       \
+        __android_log_print(ANDROID_LOG_DEBUG, "systemcache", __VA_ARGS__); \
     } while (0)
 
 #else
-#define DPRINTF(...) \
-    do \
-    { \
+#define DPRINTF(...)                                                        \
+    do                                                                      \
+    {                                                                       \
+        __android_log_print(ANDROID_LOG_DEBUG, "systemcache", __VA_ARGS__); \
     } while (0)
 
 #endif

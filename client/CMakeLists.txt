@@ -27,5 +27,9 @@ set_target_properties(${CLIENT} PROPERTIES
 target_compile_options(${CLIENT} PUBLIC ${CLIENT_COMPILE_FLAGS})
 target_link_options(${CLIENT} PUBLIC ${CLIENT_LINK_FLAGS})
 target_include_directories(${CLIENT} PUBLIC ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/client/include)
+
+if(ANDROID)
+    target_link_libraries(${CLIENT} $<$<NOT:$<BOOL:${NDEBUG}>>:log>)
+endif()
 add_subdirectory(src/)
 add_subdirectory(core/)

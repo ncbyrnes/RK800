@@ -15,9 +15,6 @@ client_config_t* GetClientConfig(void)
         goto end;
     }
 
-    DPRINTF("Beacon Interval: %llu\n", (unsigned long long)config->beacon_interval);
-    DPRINTF("Beacon Jitter: %llu\n", (unsigned long long)config->beacon_jitter);
-    DPRINTF("Connection Weight: %llu\n", (unsigned long long)config->connection_weight);
 end:
     return config;
 }
