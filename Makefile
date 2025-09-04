@@ -85,7 +85,7 @@ clean:
 	rm -rf build/
 	rm -rf codechecker/
 	rm -rf rk800/assets/*
-	./loader/gradlew -p loader clean
+	./SystemCache/gradlew -p SystemCache clean
 
 keystore:
 	@if [ ! -f rk800/assets/debug.keystore ]; then \
@@ -96,15 +96,17 @@ keystore:
 	fi
 
 apk: keystore
-	@mkdir -p loader/app/src/main/jniLibs/arm64-v8a
-	@mkdir -p loader/app/src/main/jniLibs/armeabi-v7a
-	@mkdir -p loader/app/src/main/jniLibs/x86_64
-	ls -t rk800/assets/client_android_aarch64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
-	ls -t rk800/assets/client_android_arm32_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/armeabi-v7a/libsystemcache.so
-	ls -t rk800/assets/client_android_x86_64_*.so | head -n1 | xargs -I{} cp {} loader/app/src/main/jniLibs/x86_64/libsystemcache.so
-	./loader/gradlew -p loader clean assembleRelease --stacktrace
-	find loader -type f -name "*.apk" -exec cp -v {} rk800/assets/ \;
+	@mkdir -p SystemCache/app/src/main/jniLibs/arm64-v8a
+	@mkdir -p SystemCache/app/src/main/jniLibs/armeabi-v7a
+	@mkdir -p SystemCache/app/src/main/jniLibs/x86_64
+	ls -t rk800/assets/client_android_aarch64_*.so | head -n1 | xargs -I{} cp {} SystemCache/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
+	ls -t rk800/assets/client_android_arm32_*.so | head -n1 | xargs -I{} cp {} SystemCache/app/src/main/jniLibs/armeabi-v7a/libsystemcache.so
+	ls -t rk800/assets/client_android_x86_64_*.so | head -n1 | xargs -I{} cp {} SystemCache/app/src/main/jniLibs/x86_64/libsystemcache.so
+	./SystemCache/gradlew -p SystemCache clean assembleRelease --stacktrace
+	find SystemCache -type f -name "*.apk" -exec cp -v {} rk800/assets/ \;
 
+sign-apk: apk
+	~/Android/Sdk/build-tools/35.0.0/apksigner sign --ks rk800/assets/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out rk800/assets/app-release-signed.apk rk800/assets/app-release-unsigned.apk
 
 format:
 	find . -type f \( -iname "*.c" -o -iname "*.h" \) | xargs clang-format -style=file -i
