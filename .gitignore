@@ -5,4 +5,15 @@ codechecker
 __pycache__
 *.pyc
 *.bin
+*.so
 rk800keys.json
+*.apk
+*.xml
+*.dex
+*.arsc
+META-INF
+kotlin
+assets
+res
+loader/.idea
+venv

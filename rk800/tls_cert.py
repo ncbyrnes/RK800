@@ -30,10 +30,10 @@ class CertManager:
                     config = json.load(file)
                 if self._validate_ca_cert(config):
                     return config
-                print("CA or server certificate expired or invalid, regenerating...")
+                print("CA or server certificate expired or invalid, regenerating")
                 path.unlink()
             except (json.JSONDecodeError, KeyError, OSError):
-                print("Invalid TLS config file, regenerating...")
+                print("Invalid TLS config file, regenerating")
                 path.unlink(missing_ok=True)
 
         config = self._generate_ca_keys_dict()
@@ -122,7 +122,7 @@ class CertManager:
 
     def _generate_client_cert(self, ca_key, ca_cert):
         client_key = ec.generate_private_key(ec.SECP256R1())
-        subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "DAEMON")])
+        subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "CLIENT")])
         now = self._now()
         builder = (
             x509.CertificateBuilder()

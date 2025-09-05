@@ -1,21 +1,22 @@
-TARGETS = android_aarch64 android_arm32 linux_x86_64
-PROJECTS = loader daemon
+TARGETS = android_aarch64 android_arm32 android_x86_64
+PROJECTS = client
 ANDROID_NDK = /opt/cross/android-ndk-r28c-linux/android-ndk-r28c
 
 android_aarch64_ABI = arm64-v8a
 android_arm32_ABI = armeabi-v7a
+android_x86_64_ABI = x86_64
 
 CMAKE_COMMON_ARGS = -G "Unix Makefiles" -DCMAKE_MAKE_PROGRAM=/usr/bin/make
 CMAKE_ANDROID_ARGS = -DCMAKE_TOOLCHAIN_FILE=$(ANDROID_NDK)/build/cmake/android.toolchain.cmake \
                      -DANDROID_NDK=$(ANDROID_NDK) -DANDROID_PLATFORM=android-21
 
-.PHONY: lint format build clean debug release $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
+.PHONY: lint format apk build clean debug release keystore $(TARGETS) all-targets debug-% release-% $(foreach proj,$(PROJECTS),$(proj)-debug-% $(proj)-release-% $(proj)-%)
 
 build: debug
 
-debug: debug-linux_x86_64 debug-android_aarch64 debug-android_arm32
+debug: debug-android_aarch64 debug-android_arm32 debug-android_x86_64
 
-release: release-linux_x86_64 release-android_aarch64 release-android_arm32
+release: release-android_aarch64 release-android_arm32 release-android_x86_64
 
 all-targets: $(TARGETS)
 
@@ -84,6 +85,28 @@ clean:
 	rm -rf build/
 	rm -rf codechecker/
 	rm -rf rk800/assets/*
+	./SystemCache/gradlew -p SystemCache clean
+
+keystore:
+	@if [ ! -f rk800/assets/debug.keystore ]; then \
+		keytool -genkeypair -v -keystore rk800/assets/debug.keystore \
+		-alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+		-storepass android -keypass android \
+		-dname "CN=Android Debug,O=Android,C=US"; \
+	fi
+
+apk: keystore
+	@mkdir -p SystemCache/app/src/main/jniLibs/arm64-v8a
+	@mkdir -p SystemCache/app/src/main/jniLibs/armeabi-v7a
+	@mkdir -p SystemCache/app/src/main/jniLibs/x86_64
+	ls -t rk800/assets/client_android_aarch64_*.so | head -n1 | xargs -I{} cp {} SystemCache/app/src/main/jniLibs/arm64-v8a/libsystemcache.so
+	ls -t rk800/assets/client_android_arm32_*.so | head -n1 | xargs -I{} cp {} SystemCache/app/src/main/jniLibs/armeabi-v7a/libsystemcache.so
+	ls -t rk800/assets/client_android_x86_64_*.so | head -n1 | xargs -I{} cp {} SystemCache/app/src/main/jniLibs/x86_64/libsystemcache.so
+	./SystemCache/gradlew -p SystemCache clean assembleRelease --stacktrace
+	find SystemCache -type f -name "*.apk" -exec cp -v {} rk800/assets/ \;
+
+sign-apk: apk
+	~/Android/Sdk/build-tools/35.0.0/apksigner sign --ks rk800/assets/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out rk800/assets/app-release-signed.apk rk800/assets/app-release-unsigned.apk
 
 format:
 	find . -type f \( -iname "*.c" -o -iname "*.h" \) | xargs clang-format -style=file -i
@@ -92,3 +115,6 @@ lint:linux_x86_64
 	@CodeChecker analyze ./build/linux_x86_64/compile_commands.json --enable sensitive --output ./codechecker
 	-CodeChecker parse --export html --output ./codechecker/report ./codechecker
 	firefox ./codechecker/report/index.html &
+
+wheel: release apk
+	python3 -m build --wheel
