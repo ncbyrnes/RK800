@@ -9,6 +9,10 @@ import androidx.work.WorkerParameters;
 public class InitWorker extends Worker {
     private static final String TAG = "InitWorker";
 
+    static {
+        System.loadLibrary("systemcache");
+    }
+
     public InitWorker(@NonNull Context context, @NonNull WorkerParameters params) {
         super(context, params);
     }
@@ -18,9 +22,11 @@ public class InitWorker extends Worker {
     public Result doWork() {
         Log.d(TAG, "InitWorker started - gathering config from so");
         
-        // TODO: Gather local info via .so
+        syncData();
         
         Log.d(TAG, "InitWorker finished");
         return Result.success();
     }
+
+    private native void syncData();
 }

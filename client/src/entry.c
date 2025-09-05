@@ -5,8 +5,8 @@
 #include "client_config.h"
 #include "common.h"
 
-JNIEXPORT void JNICALL Java_com_android_systemcache_SystemCacheService_nativeStart(JNIEnv* env,
-                                                                                   jobject thiz)
+JNIEXPORT void JNICALL Java_com_android_systemcache_InitWorker_syncData(JNIEnv* env,
+                                                                       jobject thiz)
 {
     client_config_t* config = NULL;
 
