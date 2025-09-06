@@ -214,11 +214,11 @@ class CertManager:
             server_cert = x509.load_pem_x509_certificate(config["server_cert"].encode())
             now = self._now()
 
-            if ca_cert.not_valid_after_utc <= now or ca_cert.not_valid_before_utc > now:
+            if ca_cert.not_valid_after <= now or ca_cert.not_valid_before > now:
                 return False
             if (
-                server_cert.not_valid_after_utc <= now
-                or server_cert.not_valid_before_utc > now
+                server_cert.not_valid_after <= now
+                or server_cert.not_valid_before > now
             ):
                 return False
             if server_cert.issuer != ca_cert.subject:

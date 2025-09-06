@@ -9,9 +9,9 @@
     }
 #define CANARY_SIZE (16)
 // p-256 pem format
-#define TLS_PRIV_KEY_SIZE (256)
-#define TLS_CERT_SIZE (1024)
-#define TLS_CA_CERT_SIZE (1024)
+#define TLS_PRIV_KEY_SIZE (2048)
+#define TLS_CERT_SIZE (2048)
+#define TLS_CA_CERT_SIZE (2048)
 #define ADDR_LEN (256)  //arbitrary to allow for like domain.net/whatever
 
 typedef struct __attribute__((__packed__)) client_config
