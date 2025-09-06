@@ -37,4 +37,6 @@ android {
 
 dependencies {
     implementation("androidx.work:work-runtime:2.9.0")
+    implementation("androidx.core:core:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }

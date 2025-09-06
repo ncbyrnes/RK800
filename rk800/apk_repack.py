@@ -1,46 +1,74 @@
-import tempfile
-import shutil
 import zipfile
-import os
 import subprocess
+import shutil
 from pathlib import Path
 from importlib.resources import files
 
 
 class APKRepack:
 
+    def __init__(self, tmp_dir: Path, output_path: Path):
+        self.tmp_dir = tmp_dir
+        self.output_path = output_path
+
+    def repack(self):
+        apk_data = (
+            files("rk800.assets").joinpath("app-release-unsigned.apk").read_bytes()
+        )
+        apk_path = self.tmp_dir / "input.apk"
+        apk_path.write_bytes(apk_data)
+
+        temp_apk_path = self.tmp_dir / "temp.apk"
+        
+        with zipfile.ZipFile(apk_path, "r") as input_zip:
+            with zipfile.ZipFile(temp_apk_path, "w") as output_zip:
+                for item in input_zip.infolist():
+                    if not item.filename.startswith("lib/"):
+                        data = input_zip.read(item.filename)
+                        output_zip.writestr(item, data)
+                
+                for so_file in self.tmp_dir.rglob("*.so"):
+                    relative_path = so_file.relative_to(self.tmp_dir)
+                    so_name = f"lib/{relative_path}"
+                    output_zip.writestr(so_name, so_file.read_bytes())
+        
+        apk_path.unlink()
+        temp_apk_path.rename(apk_path)
+
+        aligned_apk_path = self.tmp_dir / "aligned.apk"
+        self._align_apk(apk_path, aligned_apk_path)
+        self._sign_apk(aligned_apk_path, self.tmp_dir)
+        
+        with open(self.output_path, "wb") as output_file:
+            output_file.write(aligned_apk_path.read_bytes())
+        
+        print(f"APK written to: {self.output_path}")
+
     @staticmethod
-    def repack(shared_object: bytearray, is_64: bool):
-        temp_dir = None
-        try:
-            temp_dir = Path(tempfile.mkdtemp(prefix="rk800_apk_"))
-
-            apk_data = (
-                files("rk800.assets").joinpath("app-release-unsigned.apk").read_bytes()
-            )
-            apk_path = temp_dir / "input.apk"
-            apk_path.write_bytes(apk_data)
-
-            lib_dir = "arm64-v8a" if is_64 else "armeabi-v7a"
-            so_name = f"lib/{lib_dir}/libsystemcache.so"
-
-            with zipfile.ZipFile(apk_path, "a") as apk_zip:
-                apk_zip.writestr(so_name, shared_object)
-
-            APKRepack._sign_apk(apk_path, temp_dir)
-            return apk_path.read_bytes()
-
-        finally:
-            if temp_dir and temp_dir.exists():
-                shutil.rmtree(temp_dir)
+    def _align_apk(input_path: Path, output_path: Path):
+        # i refuse to remake this in python
+        # absolute waste of my time
+        if not shutil.which("zipalign"):
+            raise FileNotFoundError("zipalign not found in PATH - install Android SDK build tools")
+        
+        subprocess.run([
+            "zipalign", "-p", "-f", "4096", 
+            str(input_path), str(output_path)
+        ], check=True)
 
     @staticmethod
     def _sign_apk(apk_path: Path, temp_dir: Path):
+        if not shutil.which("apksigner"):
+            print("WARNING: apksigner not found in PATH - APK will need to be signed manually later")
+            return
+        
         keystore_data = files("rk800.assets").joinpath("debug.keystore").read_bytes()
         keystore_path = temp_dir / "debug.keystore"
         keystore_path.write_bytes(keystore_data)
 
         # need to find a better way because scuffed
+        # nvm this whole process was not intented to be ripped apart and put back 
+        # together, but im not putting my keys outside of my .so
         subprocess.run(
             [
                 "apksigner",

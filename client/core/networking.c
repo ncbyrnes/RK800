@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,13 +73,13 @@ int CreateConnSock(const char* address, uint16_t port, time_t timeout, int* out_
         sock = socket(ret->ai_family, ret->ai_socktype, ret->ai_protocol);
         if (-1 == sock)
         {
-            DPRINTF("could not create socket");
+            DPRINTF("could not create socket errno %d : %s", errno, strerror(errno));
             continue;
         }
 
         if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&time_val, sizeof(time_val)))
         {
-            DPRINTF("could not setsockopt SO_RCVTIMEO");
+            DPRINTF("could not setsockopt SO_RCVTIMEO errno %d : %s", errno, strerror(errno));
             close(sock);
             sock = -1;
             continue;
@@ -86,7 +87,7 @@ int CreateConnSock(const char* address, uint16_t port, time_t timeout, int* out_
 
         if (-1 == connect(sock, ret->ai_addr, ret->ai_addrlen))
         {
-            DPRINTF("failed to connect socket");
+            DPRINTF("failed to connect socket errno %d : %s", errno, strerror(errno));
             close(sock);
             sock = -1;
             continue;

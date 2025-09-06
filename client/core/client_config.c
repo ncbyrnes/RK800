@@ -25,6 +25,7 @@ int DecryptConfig(client_config_t* config)
     config->beacon_interval = be64toh(config->beacon_interval);
     config->beacon_jitter = be64toh(config->beacon_jitter);
     config->connection_weight = be64toh(config->connection_weight);
+    config->port = ntohs(config->port);
     exit_code = EXIT_SUCCESS;
     return exit_code;
 }

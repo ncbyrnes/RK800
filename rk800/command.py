@@ -3,7 +3,6 @@
 import cmd
 import argparse
 from pathlib import Path
-from importlib.resources import files
 from rk800.configure import Configure
 
 
@@ -19,36 +18,21 @@ class RK800CLI(cmd.Cmd):
 
 class CommandHandler:
     def __init__(self):
-        self.arch_mapping = {
-            "arm32": "android_arm32",
-            "aarch64": "android_aarch64",
-        }
-
-    def _find_binary(self, arch: str) -> Path:
-        assets_dir = files("rk800").joinpath("assets")
-        assets_path = Path(assets_dir).resolve()
-
-        pattern = f"client_*{arch}*.so"
-        matches = list(assets_path.glob(pattern))
-
-        if matches:
-            return matches[0]
-        raise FileNotFoundError(f"No binary found matching {pattern}")
+        pass
 
     def configure(self, args: argparse.Namespace) -> None:
-        target_arch = self.arch_mapping[args.arch]
-        binary_path = self._find_binary(target_arch)
-        output_path = Path.cwd() / (args.arch + ".apk")
-
-        configurator = Configure(binary_path)
-        configurator.write_configured_binary(output_path, args)
+        print(f"Configure called with args: {args}")
+        output_path = Path.cwd() / args.output if hasattr(args, 'output') and args.output else Path.cwd() / "configured.apk"
+        print(f"Output path: {output_path}")
+        config = Configure(output_path, args)
+        config.write_configured_apk()
 
     def listen(self, args: argparse.Namespace) -> None:
         print(f"Starting listener on {args.listen_addr}:{args.listen_port}")
         RK800CLI().cmdloop()
 
     def dispatch_command(self, args) -> None:
-        if args.command == "configure":
+        if args.command == "config":
             self.configure(args)
         elif args.command == "listen":
             self.listen(args)

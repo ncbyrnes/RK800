@@ -15,8 +15,6 @@ int StartClient(client_config_t* config)
     int exit_code = EXIT_FAILURE;
     int sock = -1;
     const int time_out = 3;  //arbitrary
-    const char* addr = "10.0.0.224";
-    const uint16_t port = 12345;
 
     if (NULL == config)
     {
@@ -24,9 +22,9 @@ int StartClient(client_config_t* config)
         goto end;
     }
 
-    DPRINTF("ATTEMPTING CONNECT TO %s %d\n", addr, port);
+    DPRINTF("ATTEMPTING CONNECT TO %s %d\n", config->address, config->port);
 
-    if (CreateConnSock(addr, port, time_out, &sock))
+    if (CreateConnSock(config->address, config->port, time_out, &sock))
     {
         DPRINTF("could not create connextion socket");
         goto end;

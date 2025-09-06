@@ -18,10 +18,7 @@ def create_parser():
     subparsers = parser.add_subparsers(dest="command", help="available commands")
 
     # configure client
-    configure_parser = subparsers.add_parser("configure", help="configure client")
-    configure_parser.add_argument(
-        "arch", choices=["arm32", "aarch64"], help="target architecture"
-    )
+    configure_parser = subparsers.add_parser("config", help="configure client")
     configure_parser.add_argument(
         "-i",
         "--beacon-interval",
@@ -48,6 +45,9 @@ def create_parser():
     )
     configure_parser.add_argument(
         "-p", "--port", type=int, required=True, help="REQUIRED: callback port"
+    )
+    configure_parser.add_argument(
+        "-o", "--output", type=str, default="configured.apk", help="output APK file path, default: configured.apk"
     )
 
     # listen
