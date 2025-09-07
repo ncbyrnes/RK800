@@ -1,22 +1,20 @@
 package com.android.systemcache;
 
 import android.app.Application;
-import android.util.Log;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
 
 public class SystemCacheApplication extends Application {
-    private static final String TAG = "SystemCacheApp";
+    
+    static {
+        try {
+            System.loadLibrary("systemcache");
+        } catch (UnsatisfiedLinkError linkError) {
+            // if this fails theres nothing we can do to mitigate,
+            // the entire app relies on the shared object, were dead if it fails
+        }
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        
-        Log.d(TAG, "Application started - scheduling InitWorker for testing");
-        
-        OneTimeWorkRequest initWork = new OneTimeWorkRequest.Builder(InitWorker.class).build();
-        WorkManager.getInstance(this).enqueue(initWork);
-        
-        Log.d(TAG, "InitWorker scheduled");
     }
 }

