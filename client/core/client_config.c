@@ -19,6 +19,12 @@ end:
     return config;
 }
 
+/**
+ * @brief Decrypt and validate embedded client configuration
+ * 
+ * @param[in,out] config Client configuration structure to decrypt
+ * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 int DecryptConfig(client_config_t* config)
 {
     int exit_code = EXIT_SUCCESS;

@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class RK800CLI(cmd.Cmd):
+    """Interactive CLI interface for RK800
+    
+    Provides command line interface for manual operation.
+    """
     intro = "RK800 CLI. Type help or ? to list commands.\n"
     prompt = "rk800> "
 
@@ -20,7 +24,9 @@ class RK800CLI(cmd.Cmd):
 
 
 class CommandHandler:
+    """Handle command dispatch for RK800 operations"""
     def __init__(self):
+        """Initialize command handler"""
         pass
 
     def configure(self, args: argparse.Namespace) -> None:

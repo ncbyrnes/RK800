@@ -27,6 +27,7 @@ static int LoadCACertificate(TLS* tls_conn, const char* tls_ca_cert);
 static int EstablishTLSConnection(TLS* tls_conn);
 static void CleanupTLS(TLS* tls_conn);
 
+
 int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert,
                         const char* tls_ca_cert, TLS** tls)
 {
@@ -118,6 +119,12 @@ end:
     return exit_code;
 }
 
+/**
+ * @brief Initialize TLS context and configuration
+ * 
+ * @param[in,out] tls_conn TLS connection structure to initialize
+ * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 static int InitializeTLS(TLS* tls_conn)
 {
     int exit_code = EXIT_FAILURE;
@@ -171,6 +178,13 @@ end:
     return exit_code;
 }
 
+/**
+ * @brief Load client private key from PEM format
+ * 
+ * @param[in,out] tls_conn TLS connection structure
+ * @param[in] tls_priv_key Private key in PEM format
+ * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 static int LoadPrivateKey(TLS* tls_conn, const char* tls_priv_key)
 {
     int exit_code = EXIT_FAILURE;
@@ -204,6 +218,13 @@ end:
     return exit_code;
 }
 
+/**
+ * @brief Load client certificate from PEM format
+ * 
+ * @param[in,out] tls_conn TLS connection structure
+ * @param[in] tls_cert Client certificate in PEM format
+ * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 static int LoadCertificate(TLS* tls_conn, const char* tls_cert)
 {
     int exit_code = EXIT_FAILURE;
@@ -235,6 +256,13 @@ end:
     return exit_code;
 }
 
+/**
+ * @brief Load CA certificate for server verification
+ * 
+ * @param[in,out] tls_conn TLS connection structure
+ * @param[in] tls_ca_cert CA certificate in PEM format
+ * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 static int LoadCACertificate(TLS* tls_conn, const char* tls_ca_cert)
 {
     int exit_code = EXIT_FAILURE;
@@ -273,6 +301,14 @@ end:
     return exit_code;
 }
 
+/**
+ * @brief Custom send function for mbed TLS
+ * 
+ * @param[in] ctx TLS connection context
+ * @param[in] buf Data buffer to send
+ * @param[in] len Length of data to send
+ * @return int Number of bytes sent, or mbed TLS error code
+ */
 static int TLSSend(void* ctx, const unsigned char* buf, size_t len)
 {
     TLS* tls_conn = (TLS*)ctx;
@@ -320,6 +356,14 @@ static int TLSSend(void* ctx, const unsigned char* buf, size_t len)
     }
 }
 
+/**
+ * @brief Custom receive function for mbed TLS
+ * 
+ * @param[in] ctx TLS connection context
+ * @param[out] buf Buffer to store received data
+ * @param[in] len Maximum bytes to receive
+ * @return int Number of bytes received, or mbed TLS error code
+ */
 static int TLSRecv(void* ctx, unsigned char* buf, size_t len)
 {
     TLS* tls_conn = (TLS*)ctx;
@@ -357,6 +401,12 @@ static int TLSRecv(void* ctx, unsigned char* buf, size_t len)
     }
 }
 
+/**
+ * @brief Perform TLS handshake and establish secure connection
+ * 
+ * @param[in,out] tls_conn TLS connection structure
+ * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 static int EstablishTLSConnection(TLS* tls_conn)
 {
     int exit_code = EXIT_FAILURE;
@@ -415,6 +465,11 @@ end:
     return exit_code;
 }
 
+/**
+ * @brief Clean up TLS resources and free memory
+ * 
+ * @param[in,out] tls_conn TLS connection structure to cleanup
+ */
 static void CleanupTLS(TLS* tls_conn)
 {
     if (NULL == tls_conn)

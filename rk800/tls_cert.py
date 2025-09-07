@@ -13,11 +13,21 @@ logger = logging.getLogger(__name__)
 
 
 class CertManager:
+    """Certificate manager for generating and managing TLS certificates
+    
+    Handles CA certificate creation, server certificates, and client certificates
+    for mutual TLS authentication.
+    """
     TLS_CONFIG_FILE = "rk800keys.json"
     CA_VALIDITY_DAYS = 3650  # 10 years
     CERT_VALIDITY_DAYS = 3650  # 10 years
 
     def get_server_tls_config(self) -> dict:
+        """Get server TLS configuration
+        
+        Returns:
+            dict: server key, cert, and CA cert for TLS setup
+        """
         config = self.load_or_create_tls_config()
         return {
             "server_key": config["server_key"],
@@ -26,6 +36,11 @@ class CertManager:
         }
 
     def load_or_create_tls_config(self) -> dict:
+        """Load existing TLS config or create new certificates
+        
+        Returns:
+            dict: complete TLS configuration with all certificates and keys
+        """
         path = Path.cwd() / self.TLS_CONFIG_FILE
         if path.exists():
             try:
@@ -49,6 +64,11 @@ class CertManager:
         return config
 
     def generate_client_cert(self) -> dict:
+        """Generate new client certificate signed by CA
+        
+        Returns:
+            dict: client key, cert, and CA cert for client authentication
+        """
         config = self.load_or_create_tls_config()
         try:
             ca_key_obj = serialization.load_pem_private_key(
@@ -66,6 +86,11 @@ class CertManager:
         }
 
     def _now(self):
+        """Get current UTC time
+        
+        Returns:
+            datetime: current UTC datetime
+        """
         return datetime.now(timezone.utc)
 
     def _create_key_usage(
@@ -75,6 +100,17 @@ class CertManager:
         key_cert_sign=False,
         crl_sign=False,
     ):
+        """Create X.509 key usage extension
+        
+        Args:
+            digital_signature (bool): enable digital signature usage
+            key_encipherment (bool): enable key encipherment usage
+            key_cert_sign (bool): enable certificate signing usage
+            crl_sign (bool): enable CRL signing usage
+            
+        Returns:
+            x509.KeyUsage: configured key usage extension
+        """
         return x509.KeyUsage(
             digital_signature=digital_signature,
             content_commitment=False,
@@ -88,6 +124,14 @@ class CertManager:
         )
 
     def _serialize_private_key(self, private_key):
+        """Serialize private key to PEM format
+        
+        Args:
+            private_key: cryptography private key object
+            
+        Returns:
+            str: PEM encoded private key
+        """
         return private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
@@ -95,9 +139,22 @@ class CertManager:
         ).decode()
 
     def _serialize_certificate(self, certificate):
+        """Serialize certificate to PEM format
+        
+        Args:
+            certificate: cryptography certificate object
+            
+        Returns:
+            str: PEM encoded certificate
+        """
         return certificate.public_bytes(serialization.Encoding.PEM).decode()
 
     def _generate_ca_cert(self):
+        """Generate CA certificate and private key
+        
+        Returns:
+            tuple: CA private key and certificate objects
+        """
         ca_key = ec.generate_private_key(ec.SECP256R1())
         subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "ROOT-CA")])
         builder = (
@@ -124,6 +181,15 @@ class CertManager:
         return ca_key, ca_cert
 
     def _generate_client_cert(self, ca_key, ca_cert):
+        """Generate client certificate signed by CA
+        
+        Args:
+            ca_key: CA private key object
+            ca_cert: CA certificate object
+            
+        Returns:
+            tuple: client private key and certificate objects
+        """
         client_key = ec.generate_private_key(ec.SECP256R1())
         subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "CLIENT")])
         now = self._now()
@@ -158,6 +224,15 @@ class CertManager:
         return client_key, client_cert
 
     def _generate_server_cert(self, ca_key, ca_cert):
+        """Generate server certificate signed by CA
+        
+        Args:
+            ca_key: CA private key object
+            ca_cert: CA certificate object
+            
+        Returns:
+            tuple: server private key and certificate objects
+        """
         server_key = ec.generate_private_key(ec.SECP256R1())
         subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "RK800-SERVER")])
         now = self._now()
@@ -198,6 +273,11 @@ class CertManager:
         return server_key, server_cert
 
     def _generate_ca_keys_dict(self):
+        """Generate complete CA and server certificate set
+        
+        Returns:
+            dict: CA key, CA cert, server key, and server cert in PEM format
+        """
         ca_key, ca_cert = self._generate_ca_cert()
         server_key, server_cert = self._generate_server_cert(ca_key, ca_cert)
         return {
@@ -208,6 +288,14 @@ class CertManager:
         }
 
     def _validate_ca_cert(self, config: dict) -> bool:
+        """Validate CA and server certificates are valid and not expired
+        
+        Args:
+            config (dict): TLS configuration with certificates
+            
+        Returns:
+            bool: True if certificates are valid, False otherwise
+        """
         try:
             required_keys = ["ca_cert", "ca_key", "server_cert", "server_key"]
             if not all(key in config for key in required_keys):

@@ -45,6 +45,7 @@ end:
     return exit_code;
 }
 
+// test method to be removed
 static int SendToServer(int socket)
 {
     const char* msg = "hello from android :3";

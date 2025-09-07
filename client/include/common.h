@@ -53,6 +53,13 @@
         ptr = NULL; \
     } while (0)
 
+/**
+ * @brief Get safe string length up to maximum
+ * 
+ * @param[in] string Null-terminated string to measure
+ * @param[in] max_len Maximum length to check
+ * @return size_t Length of string, up to max_len
+ */
 size_t GetStringLen(char* string, size_t max_len);
 
 #endif

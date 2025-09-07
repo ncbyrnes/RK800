@@ -8,6 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 def run():
+    """Main entry point for RK800 CLI application
+    
+    Parses arguments, dispatches commands, and handles exceptions.
+    """
     try:
         args = parse_args()
         handler = CommandHandler()

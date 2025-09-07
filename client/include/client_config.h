@@ -30,5 +30,10 @@ union client_config_union
     unsigned char canary[CANARY_SIZE];
 };
 
+/**
+ * @brief Get pointer to client configuration struct
+ * 
+ * @return client_config_t* Pointer to embedded client configuration data
+ */
 client_config_t* GetClientConfig(void);
 #endif /*CLIENT_CONFIG_H*/

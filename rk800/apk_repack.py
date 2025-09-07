@@ -9,12 +9,26 @@ logger = logging.getLogger(__name__)
 
 
 class APKRepack:
+    """Handle APK repacking with custom shared libraries
+    
+    Replaces lib/ directory in APK with custom binaries and signs result.
+    """
 
     def __init__(self, tmp_dir: Path, output_path: Path):
+        """Initialize APK repacker
+        
+        Args:
+            tmp_dir (Path): temporary directory containing .so files
+            output_path (Path): path for output APK
+        """
         self.tmp_dir = tmp_dir
         self.output_path = output_path
 
     def repack(self):
+        """Repack APK with custom shared libraries
+        
+        Extracts APK, replaces lib/ directory, aligns, and signs.
+        """
         apk_data = (
             files("rk800.assets").joinpath("app-release-unsigned.apk").read_bytes()
         )
@@ -49,6 +63,12 @@ class APKRepack:
 
     @staticmethod
     def _align_apk(input_path: Path, output_path: Path):
+        """Align APK using zipalign tool
+        
+        Args:
+            input_path (Path): input APK path
+            output_path (Path): aligned APK output path
+        """
         # i refuse to remake this in python
         # absolute waste of my time
         if not shutil.which("zipalign"):
@@ -61,6 +81,12 @@ class APKRepack:
 
     @staticmethod
     def _sign_apk(apk_path: Path, temp_dir: Path):
+        """Sign APK using apksigner tool
+        
+        Args:
+            apk_path (Path): APK file to sign
+            temp_dir (Path): temporary directory for keystore
+        """
         if not shutil.which("apksigner"):
             logger.warning("apksigner not found in PATH - APK will need to be signed manually later")
             return

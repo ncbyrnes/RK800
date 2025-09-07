@@ -8,18 +8,35 @@ import struct
 
 
 class Configure:
+    """Configure APK with client settings and certificates
+    
+    Handles stamping binary with configuration data and repacking APK.
+    """
     CLIENT_CANARY = b"\x41\x39\x31\x54\x21\xff\x3d\xc1\x7a\x45\x1b\x4e\x31\x5d\x36\xc1"
     CLIENT_FORMAT = "!HHQqQ256s2048s2048s2048s"
     SEC_IN_MIN = 60
     SANITY = 1987
 
     def __init__(self, output_path: Path, args: argparse.Namespace):
+        """Initialize Configure instance
+        
+        Args:
+            output_path (Path): path for output APK file
+            args (argparse.Namespace): command line arguments
+        """
         self.output_path = output_path
         self.args = args
         self.cert_manager = CertManager()
 
     def _pack_client_config(self, args: argparse.Namespace) -> bytes:
-
+        """Pack client configuration into binary format
+        
+        Args:
+            args (argparse.Namespace): command line arguments
+            
+        Returns:
+            bytes: packed client configuration data
+        """
         beacon_interval_seconds = args.beacon_interval * self.SEC_IN_MIN
         beacon_jitter_seconds = args.beacon_jitter * self.SEC_IN_MIN
 
@@ -39,6 +56,15 @@ class Configure:
         )
 
     def stamp_binary(self, binary_data: bytes, args: argparse.Namespace) -> bytes:
+        """Stamp binary with configuration data
+        
+        Args:
+            binary_data (bytes): original binary data
+            args (argparse.Namespace): command line arguments
+            
+        Returns:
+            bytes: binary data with configuration stamped
+        """
         data = bytearray(binary_data)
         
         canary_index = data.find(self.CLIENT_CANARY)
@@ -60,6 +86,11 @@ class Configure:
         return bytes(data)
 
     def write_configured_apk(self) -> None:
+        """Write configured APK with stamped binaries
+        
+        Creates temporary directory, stamps binaries with config,
+        and repacks into final APK.
+        """
         assets_path = files("rk800.assets")
         
         with tempfile.TemporaryDirectory() as tmp_dir:

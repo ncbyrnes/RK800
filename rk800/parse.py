@@ -9,6 +9,11 @@ except ImportError:
 
 
 def create_parser():
+    """Create command line argument parser
+    
+    Returns:
+        argparse.ArgumentParser: configured argument parser
+    """
     parser = argparse.ArgumentParser(
         prog="rk800",
         description="RK800 CLI Tool",
@@ -68,5 +73,13 @@ def create_parser():
 
 
 def parse_args(args=None):
+    """Parse command line arguments
+    
+    Args:
+        args: optional arguments list, uses sys.argv if None
+        
+    Returns:
+        argparse.Namespace: parsed command line arguments
+    """
     parser = create_parser()
     return parser.parse_args(args)
