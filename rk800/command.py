@@ -2,8 +2,11 @@
 
 import cmd
 import argparse
+import logging
 from pathlib import Path
 from rk800.configure import Configure
+
+logger = logging.getLogger(__name__)
 
 
 class RK800CLI(cmd.Cmd):
@@ -12,7 +15,7 @@ class RK800CLI(cmd.Cmd):
 
     def do_exit(self, arg):
         """Exit CLI"""
-        print("Goodbye")
+        logger.info("Goodbye")
         return True
 
 
@@ -21,14 +24,14 @@ class CommandHandler:
         pass
 
     def configure(self, args: argparse.Namespace) -> None:
-        print(f"Configure called with args: {args}")
+        logger.info(f"Configure called with args: {args}")
         output_path = Path.cwd() / args.output if hasattr(args, 'output') and args.output else Path.cwd() / "configured.apk"
-        print(f"Output path: {output_path}")
+        logger.info(f"Output path: {output_path}")
         config = Configure(output_path, args)
         config.write_configured_apk()
 
     def listen(self, args: argparse.Namespace) -> None:
-        print(f"Starting listener on {args.listen_addr}:{args.listen_port}")
+        logger.info(f"Starting listener on {args.listen_addr}:{args.listen_port}")
         RK800CLI().cmdloop()
 
     def dispatch_command(self, args) -> None:

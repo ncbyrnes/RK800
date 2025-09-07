@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -7,6 +8,8 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
+
+logger = logging.getLogger(__name__)
 
 
 class CertManager:
@@ -30,10 +33,10 @@ class CertManager:
                     config = json.load(file)
                 if self._validate_ca_cert(config):
                     return config
-                print("CA or server certificate expired or invalid, regenerating")
+                logger.info("CA or server certificate expired or invalid, regenerating")
                 path.unlink()
             except (json.JSONDecodeError, KeyError, OSError):
-                print("Invalid TLS config file, regenerating")
+                logger.info("Invalid TLS config file, regenerating")
                 path.unlink(missing_ok=True)
 
         config = self._generate_ca_keys_dict()
@@ -42,7 +45,7 @@ class CertManager:
             json.dump(config, file, indent=2)
         os.chmod(temp_path, 0o600)
         temp_path.replace(path)
-        print(f"Generated new CA certificate in {path}")
+        logger.info(f"Generated new CA certificate in {path}")
         return config
 
     def generate_client_cert(self) -> dict:

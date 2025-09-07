@@ -1,8 +1,11 @@
 import zipfile
 import subprocess
 import shutil
+import logging
 from pathlib import Path
 from importlib.resources import files
+
+logger = logging.getLogger(__name__)
 
 
 class APKRepack:
@@ -42,7 +45,7 @@ class APKRepack:
         with open(self.output_path, "wb") as output_file:
             output_file.write(aligned_apk_path.read_bytes())
         
-        print(f"APK written to: {self.output_path}")
+        logger.info(f"APK written to: {self.output_path}")
 
     @staticmethod
     def _align_apk(input_path: Path, output_path: Path):
@@ -59,7 +62,7 @@ class APKRepack:
     @staticmethod
     def _sign_apk(apk_path: Path, temp_dir: Path):
         if not shutil.which("apksigner"):
-            print("WARNING: apksigner not found in PATH - APK will need to be signed manually later")
+            logger.warning("apksigner not found in PATH - APK will need to be signed manually later")
             return
         
         keystore_data = files("rk800.assets").joinpath("debug.keystore").read_bytes()

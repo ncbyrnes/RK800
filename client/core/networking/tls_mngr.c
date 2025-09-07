@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "client_config.h"
 #include "common.h"
 #include "networking/tls_mngr.h"
 
@@ -29,7 +30,6 @@ static void CleanupTLS(TLS* tls_conn);
 int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert,
                         const char* tls_ca_cert, TLS** tls)
 {
-    signal(SIGPIPE, SIG_IGN);
     int exit_code = EXIT_FAILURE;
     TLS* tls_conn = NULL;
 
@@ -63,6 +63,7 @@ int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert
         goto end;
     }
 
+    signal(SIGPIPE, SIG_IGN);
     tls_conn = calloc(1, sizeof(*tls_conn));
     if (NULL == tls_conn)
     {
@@ -121,6 +122,7 @@ static int InitializeTLS(TLS* tls_conn)
 {
     int exit_code = EXIT_FAILURE;
     int ret = -1;
+    const int read_timeout = 10000;
 
     if (NULL == tls_conn)
     {
@@ -161,7 +163,7 @@ static int InitializeTLS(TLS* tls_conn)
     mbedtls_ssl_conf_min_tls_version(&tls_conn->conf, MBEDTLS_SSL_VERSION_TLS1_2);
     mbedtls_ssl_conf_cert_profile(&tls_conn->conf, &mbedtls_x509_crt_profile_default);
     mbedtls_ssl_conf_ciphersuites(&tls_conn->conf, ciphersuites);
-    mbedtls_ssl_conf_read_timeout(&tls_conn->conf, 10000);
+    mbedtls_ssl_conf_read_timeout(&tls_conn->conf, read_timeout);
 
     exit_code = EXIT_SUCCESS;
 
@@ -187,14 +189,14 @@ static int LoadPrivateKey(TLS* tls_conn, const char* tls_priv_key)
     }
 
     ret = mbedtls_pk_parse_key(&tls_conn->pkey, (const unsigned char*)tls_priv_key,
-                               strlen(tls_priv_key) + 1, NULL, 0);
+                               GetStringLen(tls_priv_key, TLS_PRIV_KEY_SIZE) + 1, NULL, 0);
     if (0 != ret)
     {
         DPRINTF("mbedtls_pk_parse_key failed: -0x%04x", -ret);
         goto end;
     }
 
-    mbedtls_platform_zeroize((void*)tls_priv_key, strlen(tls_priv_key));
+    mbedtls_platform_zeroize((void*)tls_priv_key, GetStringLen(tls_priv_key, TLS_PRIV_KEY_SIZE));
 
     exit_code = EXIT_SUCCESS;
 
@@ -220,7 +222,7 @@ static int LoadCertificate(TLS* tls_conn, const char* tls_cert)
     }
 
     ret = mbedtls_x509_crt_parse(&tls_conn->cert, (const unsigned char*)tls_cert,
-                                 strlen(tls_cert) + 1);
+                                 GetStringLen(tls_cert, TLS_CERT_SIZE) + 1);
     if (0 != ret)
     {
         DPRINTF("mbedtls_x509_crt_parse failed: -0x%04x", -ret);
@@ -251,7 +253,7 @@ static int LoadCACertificate(TLS* tls_conn, const char* tls_ca_cert)
     }
 
     ret = mbedtls_x509_crt_parse(&tls_conn->ca_cert, (const unsigned char*)tls_ca_cert,
-                                 strlen(tls_ca_cert) + 1);
+                                 GetStringLen(tls_ca_cert, TLS_CA_CERT_SIZE) + 1);
     if (ret < 0)
     {
         DPRINTF("mbedtls_x509_crt_parse failed: -0x%04x", -ret);

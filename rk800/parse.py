@@ -15,6 +15,12 @@ def create_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
+    parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="enable debug logging"
+    )
+
     subparsers = parser.add_subparsers(dest="command", help="available commands")
 
     # configure client
