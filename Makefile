@@ -84,7 +84,7 @@ $(foreach proj,$(PROJECTS),$(foreach target,$(TARGETS),$(eval $(call PROJECT_TAR
 clean:
 	rm -rf build/
 	rm -rf codechecker/
-	rm *.apk
+	rm -f *.apk
 	rm -rf rk800/assets/*
 	./SystemCache/gradlew -p SystemCache clean
 

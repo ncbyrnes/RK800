@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include "common.h"
-#include "networking.h"
+#include "networking/networking.h"
 
 /**
  * @brief Create a Connection Socket

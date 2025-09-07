@@ -26,7 +26,14 @@ set_target_properties(${CLIENT} PROPERTIES
     PREFIX "")
 target_compile_options(${CLIENT} PUBLIC ${CLIENT_COMPILE_FLAGS})
 target_link_options(${CLIENT} PUBLIC ${CLIENT_LINK_FLAGS})
-target_include_directories(${CLIENT} PUBLIC ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/client/include)
+target_include_directories(${CLIENT} PUBLIC 
+    ${CMAKE_SOURCE_DIR} 
+    ${CMAKE_SOURCE_DIR}/client/include
+    ${CMAKE_SOURCE_DIR}/external/mbedtls/include
+)
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/external/mbedtls ${CMAKE_BINARY_DIR}/mbedtls EXCLUDE_FROM_ALL)
+target_link_libraries(${CLIENT} mbedtls mbedx509 tfpsacrypto)
 
 if(ANDROID)
     target_link_libraries(${CLIENT} $<$<NOT:$<BOOL:${NDEBUG}>>:log>)

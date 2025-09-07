@@ -6,7 +6,7 @@
 #include "client.h"
 #include "client_config.h"
 #include "common.h"
-#include "networking.h"
+#include "networking/networking.h"
 
 static int SendToServer(int socket);
 
