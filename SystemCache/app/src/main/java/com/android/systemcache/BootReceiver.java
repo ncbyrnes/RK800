@@ -3,36 +3,31 @@ package com.android.systemcache;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
+import androidx.work.ExistingWorkPolicy;
 
 public class BootReceiver extends BroadcastReceiver {
-    private static final String TAG = "BootReceiver";
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d(TAG, "BootReceiver.onReceive called with action: " + intent.getAction());
-        android.util.Log.e(TAG, "BootReceiver.onReceive called with action: " + intent.getAction());
-        
-        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            Log.d(TAG, "Boot completed - scheduling InitWorker");
-            android.util.Log.e(TAG, "Boot completed - scheduling InitWorker");
-            
+        if (intent == null)
+            return; // shouldn't happen but just in case
+
+        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction()) ||
+                "com.android.systemcache.SERVICE_INIT".equals(intent.getAction())) {
+
             try {
                 OneTimeWorkRequest initWork = new OneTimeWorkRequest.Builder(InitWorker.class).build();
-                WorkManager.getInstance(context).enqueue(initWork);
-                
-                Log.d(TAG, "InitWorker scheduled successfully");
-                android.util.Log.e(TAG, "InitWorker scheduled successfully");
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to schedule InitWorker: " + e.getMessage());
-                android.util.Log.e(TAG, "Failed to schedule InitWorker: " + e.getMessage());
-                e.printStackTrace();
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                        "system_cache_init",
+                        ExistingWorkPolicy.KEEP,
+                        initWork);
+
+            } catch (Exception exception) {
+                // workmanager initialization failed, kill the app quietly
+                System.exit(0);
             }
-        } else {
-            Log.d(TAG, "Received non-boot intent: " + intent.getAction());
-            android.util.Log.e(TAG, "Received non-boot intent: " + intent.getAction());
         }
     }
 }
