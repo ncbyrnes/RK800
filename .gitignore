@@ -18,3 +18,4 @@ res
 loader/.idea
 venv
 *.a
+*.pcap
