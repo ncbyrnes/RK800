@@ -1,35 +1,28 @@
 #ifndef TLS_MNGR_H
 #define TLS_MNGR_H
 
-#include <mbedtls/ssl.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/pk.h>
+#include <wolfssl/options.h>
+#include <wolfssl/ssl.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
+
+typedef int (*WolfSslLoadFunc)(WOLFSSL_CTX* ctx, const unsigned char* buffer, long buffer_len, int format);
+
+typedef struct cert_config
+{
+    const char* data;
+    size_t max_len;
+    WolfSslLoadFunc func;
+    const char* func_name;
+} cert_config_t;
 
 typedef struct tls_struct
 {
     int sock;
-    int connected;
-    mbedtls_ssl_context ssl;
-    mbedtls_ssl_config conf;
-    mbedtls_x509_crt cert;
-    mbedtls_x509_crt ca_cert;
-    mbedtls_pk_context pkey;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
+    WOLFSSL_CTX* ctx;
+    WOLFSSL* ssl;
 } TLS;
 
-/**
- * @brief Creates a new TLS connection with mutual authentication
- * 
- * @param[in] sock Connected socket descriptor
- * @param[in] tls_priv_key Client TLS private key in PEM format
- * @param[in] tls_cert Client TLS certificate in PEM format
- * @param[in] tls_ca_cert CA certificate for server verification in PEM format
- * @param[out] tls Pointer to TLS struct for use in further networking operations
- * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
- */
 int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert, const char* tls_ca_cert, TLS** tls);
+void TLSShutdown(TLS* tls);
 
 #endif /*TLS_MNGR_H*/

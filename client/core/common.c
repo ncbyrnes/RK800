@@ -1,6 +1,6 @@
 #include "common.h"
 
-size_t GetStringLen(char* string, size_t max_len)
+size_t GetStringLen(const char* string, size_t max_len)
 {
     size_t len = 0;
     if (string != NULL)

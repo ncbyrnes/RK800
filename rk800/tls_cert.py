@@ -124,17 +124,9 @@ class CertManager:
         )
 
     def _serialize_private_key(self, private_key):
-        """Serialize private key to PEM format
-        
-        Args:
-            private_key: cryptography private key object
-            
-        Returns:
-            str: PEM encoded private key
-        """
         return private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption(),
         ).decode()
 
@@ -297,24 +289,55 @@ class CertManager:
             bool: True if certificates are valid, False otherwise
         """
         try:
+            logger.debug("Starting CA certificate validation")
+            
             required_keys = ["ca_cert", "ca_key", "server_cert", "server_key"]
-            if not all(key in config for key in required_keys):
+            missing_keys = [key for key in required_keys if key not in config]
+            if missing_keys:
+                logger.warning(f"Missing required keys in config: {missing_keys}")
                 return False
+            logger.debug("All required keys present in config")
 
+            logger.debug("Loading CA certificate")
             ca_cert = x509.load_pem_x509_certificate(config["ca_cert"].encode())
+            logger.debug("Loading server certificate")
             server_cert = x509.load_pem_x509_certificate(config["server_cert"].encode())
             now = self._now()
+            logger.debug(f"Current time: {now}")
 
-            if ca_cert.not_valid_after <= now or ca_cert.not_valid_before > now:
+            # Convert certificate times to timezone-aware for comparison
+            ca_not_before = ca_cert.not_valid_before.replace(tzinfo=timezone.utc)
+            ca_not_after = ca_cert.not_valid_after.replace(tzinfo=timezone.utc)
+            server_not_before = server_cert.not_valid_before.replace(tzinfo=timezone.utc)
+            server_not_after = server_cert.not_valid_after.replace(tzinfo=timezone.utc)
+
+            logger.debug(f"CA cert valid from {ca_not_before} to {ca_not_after}")
+            if ca_not_after <= now:
+                logger.warning(f"CA certificate expired: {ca_not_after} <= {now}")
                 return False
-            if (
-                server_cert.not_valid_after <= now
-                or server_cert.not_valid_before > now
-            ):
+            if ca_not_before > now:
+                logger.warning(f"CA certificate not yet valid: {ca_not_before} > {now}")
                 return False
+            logger.debug("CA certificate time validity OK")
+
+            logger.debug(f"Server cert valid from {server_not_before} to {server_not_after}")
+            if server_not_after <= now:
+                logger.warning(f"Server certificate expired: {server_not_after} <= {now}")
+                return False
+            if server_not_before > now:
+                logger.warning(f"Server certificate not yet valid: {server_not_before} > {now}")
+                return False
+            logger.debug("Server certificate time validity OK")
+
+            logger.debug(f"CA cert subject: {ca_cert.subject}")
+            logger.debug(f"Server cert issuer: {server_cert.issuer}")
             if server_cert.issuer != ca_cert.subject:
+                logger.warning(f"Server certificate issuer mismatch: {server_cert.issuer} != {ca_cert.subject}")
                 return False
+            logger.debug("Certificate chain validation OK")
 
+            logger.info("CA certificate validation successful")
             return True
-        except (ValueError, TypeError, KeyError):
+        except (ValueError, TypeError, KeyError) as error:
+            logger.error(f"Exception during CA certificate validation: {type(error).__name__}: {error}")
             return False

@@ -1,54 +1,40 @@
-// i cant believe i have to do static compilation tls again, i wanted to live off of native android tls, god damnit
-
-#include <errno.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/error.h>
-#include <mbedtls/net_sockets.h>
-#include <mbedtls/pk.h>
-#include <mbedtls/platform.h>
-#include <mbedtls/ssl.h>
-#include <mbedtls/x509.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
+
+#include <wolfssl/options.h>
+#include <wolfssl/ssl.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
 
 #include "client_config.h"
 #include "common.h"
 #include "networking/tls_mngr.h"
 
-static int InitializeTLS(TLS* tls_conn);
-static int LoadPrivateKey(TLS* tls_conn, const char* tls_priv_key);
-static int LoadCertificate(TLS* tls_conn, const char* tls_cert);
-static int LoadCACertificate(TLS* tls_conn, const char* tls_ca_cert);
-static int EstablishTLSConnection(TLS* tls_conn);
-static void CleanupTLS(TLS* tls_conn);
+#define ERROR_BUFFER_SZ (80)
 
+static void cleanup_tls(TLS* tls_conn);
+static int LoadFromBuffer(WOLFSSL_CTX* ctx, const char* data, size_t max_cert_len, 
+                         WolfSslLoadFunc loader_func, const char* func_name);
 
 int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert,
                         const char* tls_ca_cert, TLS** tls)
 {
     int exit_code = EXIT_FAILURE;
+    int ret = -1;
+    int error = 0;
+    int i = 0;
+    char buffer[ERROR_BUFFER_SZ] = {0};
     TLS* tls_conn = NULL;
-
-    if (0 > sock)
+    
+    cert_config_t cert_configs[] = {
+        {tls_ca_cert, TLS_CA_CERT_SIZE, wolfSSL_CTX_load_verify_buffer, "wolfSSL_CTX_load_verify_buffer"},
+        {tls_cert, TLS_CERT_SIZE, wolfSSL_CTX_use_certificate_buffer, "wolfSSL_CTX_use_certificate_buffer"}, 
+        {tls_priv_key, TLS_PRIV_KEY_SIZE, wolfSSL_CTX_use_PrivateKey_buffer, "wolfSSL_CTX_use_PrivateKey_buffer"}
+    };
+    
+    if (sock < 0)
     {
-        DPRINTF("invalid socket %d", sock);
-        goto end;
-    }
-
-    if (NULL == tls_priv_key)
-    {
-        DPRINTF("tls_priv_key can not be NULL");
-        goto end;
-    }
-
-    if (NULL == tls_cert)
-    {
-        DPRINTF("tls_cert can not be NULL");
+        DPRINTF("sock can not be less than 0");
         goto end;
     }
 
@@ -58,195 +44,138 @@ int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert
         goto end;
     }
 
-    if (NULL == tls || NULL != *tls)
+    if (NULL == tls)
     {
-        DPRINTF("tls must be a NULL double pointer");
+        DPRINTF("tls can not be NULL");
         goto end;
     }
 
-    signal(SIGPIPE, SIG_IGN);
+    ret = wolfSSL_Init();
+    if (ret != WOLFSSL_SUCCESS)
+    {
+        DPRINTF("wolfSSL_Init failed with code %d", ret);
+        goto end;
+    }
+
+
     tls_conn = calloc(1, sizeof(*tls_conn));
     if (NULL == tls_conn)
     {
-        DPRINTF("could not calloc tls_conn");
+        DPRINTF("tls_conn can not be NULL");
         goto end;
     }
 
     tls_conn->sock = sock;
 
-    if (InitializeTLS(tls_conn))
+    // intentionally using 1.2
+    tls_conn->ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method());
+    if (NULL == tls_conn->ctx)
     {
-        DPRINTF("InitializeTLS failed");
-        goto cleanup;
+        DPRINTF("tls_conn->ctx can not be NULL");
+        goto exit;
     }
 
-    if (LoadPrivateKey(tls_conn, tls_priv_key))
+    for (i = 0; i < 3; i++)
     {
-        DPRINTF("LoadPrivateKey failed");
-        goto cleanup;
+        if (NULL == cert_configs[i].data)
+        {
+            if (0 == i)
+            {
+                DPRINTF("CA certificate is required but data is NULL");
+                goto exit;
+            }
+            else
+            {
+                continue;
+            }
+        }
+        
+        if (LoadFromBuffer(tls_conn->ctx, cert_configs[i].data, cert_configs[i].max_len,
+                          cert_configs[i].func, cert_configs[i].func_name))
+        {
+            DPRINTF("%s failed", cert_configs[i].func_name);
+            goto exit;
+        }
     }
 
-    if (LoadCertificate(tls_conn, tls_cert))
+    wolfSSL_CTX_set_verify(tls_conn->ctx, WOLFSSL_VERIFY_PEER, NULL);
+
+    tls_conn->ssl = wolfSSL_new(tls_conn->ctx);
+    if (NULL == tls_conn->ssl)
     {
-        DPRINTF("LoadCertificate failed");
-        goto cleanup;
+        DPRINTF("tls_conn->ssl can not be NULL");
+        goto exit;
     }
 
-    if (LoadCACertificate(tls_conn, tls_ca_cert))
+    ret = wolfSSL_set_fd(tls_conn->ssl, sock);
+    if (ret != WOLFSSL_SUCCESS)
     {
-        DPRINTF("LoadCACertificate failed");
-        goto cleanup;
+        DPRINTF("wolfSSL_set_fd failed with code %d", ret);
+        goto exit;
     }
 
-    if (EstablishTLSConnection(tls_conn))
+    ret = wolfSSL_connect(tls_conn->ssl);
+    if (ret != WOLFSSL_SUCCESS)
     {
-        DPRINTF("EstablishTLSConnection failed");
-        goto cleanup;
+        error = wolfSSL_get_error(tls_conn->ssl, 0);
+        wolfSSL_ERR_error_string((unsigned long)error, buffer);
+        DPRINTF("wolfSSL_connect failed with code %d: error %d: %s", ret, error, buffer);
+        goto exit;
     }
 
     *tls = tls_conn;
     exit_code = EXIT_SUCCESS;
     goto end;
 
-cleanup:
+exit:
     if (NULL != tls_conn)
     {
-        CleanupTLS(tls_conn);
+        cleanup_tls(tls_conn);
         NFREE(tls_conn);
     }
-
 end:
     return exit_code;
 }
 
-/**
- * @brief Initialize TLS context and configuration
- * 
- * @param[in,out] tls_conn TLS connection structure to initialize
- * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
- */
-static int InitializeTLS(TLS* tls_conn)
+void TLSShutdown(TLS* tls)
 {
-    int exit_code = EXIT_FAILURE;
-    int ret = -1;
-    const int read_timeout = 10000;
-
-    if (NULL == tls_conn)
+    if (NULL != tls)
     {
-        DPRINTF("tls_conn can not be NULL");
-        goto end;
+        cleanup_tls(tls);
+        NFREE(tls);
     }
-
-    mbedtls_ssl_init(&tls_conn->ssl);
-    mbedtls_ssl_config_init(&tls_conn->conf);
-    mbedtls_x509_crt_init(&tls_conn->cert);
-    mbedtls_x509_crt_init(&tls_conn->ca_cert);
-    mbedtls_pk_init(&tls_conn->pkey);
-    mbedtls_entropy_init(&tls_conn->entropy);
-    mbedtls_ctr_drbg_init(&tls_conn->ctr_drbg);
-
-    ret = mbedtls_ctr_drbg_seed(&tls_conn->ctr_drbg, mbedtls_entropy_func, &tls_conn->entropy, NULL,
-                                0);
-    if (0 != ret)
-    {
-        DPRINTF("mbedtls_ctr_drbg_seed failed: -0x%04x", -ret);
-        goto end;
-    }
-
-    ret = mbedtls_ssl_config_defaults(&tls_conn->conf, MBEDTLS_SSL_IS_CLIENT,
-                                      MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
-    if (0 != ret)
-    {
-        DPRINTF("mbedtls_ssl_config_defaults failed: -0x%04x", -ret);
-        goto end;
-    }
-
-    static const int ciphersuites[] = {MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                                       MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-                                       MBEDTLS_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                                       MBEDTLS_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, 0};
-
-    mbedtls_ssl_conf_authmode(&tls_conn->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
-    mbedtls_ssl_conf_min_tls_version(&tls_conn->conf, MBEDTLS_SSL_VERSION_TLS1_2);
-    mbedtls_ssl_conf_cert_profile(&tls_conn->conf, &mbedtls_x509_crt_profile_default);
-    mbedtls_ssl_conf_ciphersuites(&tls_conn->conf, ciphersuites);
-    mbedtls_ssl_conf_read_timeout(&tls_conn->conf, read_timeout);
-
-    exit_code = EXIT_SUCCESS;
-
-end:
-    return exit_code;
+    wolfSSL_Cleanup();
 }
 
-/**
- * @brief Load client private key from PEM format
- * 
- * @param[in,out] tls_conn TLS connection structure
- * @param[in] tls_priv_key Private key in PEM format
- * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
- */
-static int LoadPrivateKey(TLS* tls_conn, const char* tls_priv_key)
+static int LoadFromBuffer(WOLFSSL_CTX* ctx, const char* data, size_t max_cert_len, 
+                         WolfSslLoadFunc loader_func, const char* func_name)
 {
     int exit_code = EXIT_FAILURE;
     int ret = -1;
 
-    if (NULL == tls_conn)
+    if (NULL == ctx)
     {
-        DPRINTF("tls_conn can not be NULL");
+        DPRINTF("ctx can not be NULL");
         goto end;
     }
 
-    if (NULL == tls_priv_key)
+    if (NULL == data)
     {
-        DPRINTF("tls_priv_key can not be NULL");
+        DPRINTF("data can not be NULL");
         goto end;
     }
 
-    ret = mbedtls_pk_parse_key(&tls_conn->pkey, (const unsigned char*)tls_priv_key,
-                               GetStringLen(tls_priv_key, TLS_PRIV_KEY_SIZE) + 1, NULL, 0);
-    if (0 != ret)
+    if (NULL == loader_func)
     {
-        DPRINTF("mbedtls_pk_parse_key failed: -0x%04x", -ret);
+        DPRINTF("loader_func can not be NULL");
         goto end;
     }
 
-    mbedtls_platform_zeroize((void*)tls_priv_key, GetStringLen(tls_priv_key, TLS_PRIV_KEY_SIZE));
-
-    exit_code = EXIT_SUCCESS;
-
-end:
-    return exit_code;
-}
-
-/**
- * @brief Load client certificate from PEM format
- * 
- * @param[in,out] tls_conn TLS connection structure
- * @param[in] tls_cert Client certificate in PEM format
- * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
- */
-static int LoadCertificate(TLS* tls_conn, const char* tls_cert)
-{
-    int exit_code = EXIT_FAILURE;
-    int ret = -1;
-
-    if (NULL == tls_conn)
+    ret = loader_func(ctx, (const unsigned char*)data, 
+                     (long)GetStringLen(data, max_cert_len), WOLFSSL_FILETYPE_PEM);
+    if (ret != WOLFSSL_SUCCESS)
     {
-        DPRINTF("tls_conn can not be NULL");
-        goto end;
-    }
-
-    if (NULL == tls_cert)
-    {
-        DPRINTF("tls_cert can not be NULL");
-        goto end;
-    }
-
-    ret = mbedtls_x509_crt_parse(&tls_conn->cert, (const unsigned char*)tls_cert,
-                                 GetStringLen(tls_cert, TLS_CERT_SIZE) + 1);
-    if (0 != ret)
-    {
-        DPRINTF("mbedtls_x509_crt_parse failed: -0x%04x", -ret);
+        DPRINTF("%s failed with code %d", func_name, ret);
         goto end;
     }
 
@@ -256,237 +185,25 @@ end:
     return exit_code;
 }
 
-/**
- * @brief Load CA certificate for server verification
- * 
- * @param[in,out] tls_conn TLS connection structure
- * @param[in] tls_ca_cert CA certificate in PEM format
- * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
- */
-static int LoadCACertificate(TLS* tls_conn, const char* tls_ca_cert)
+static void cleanup_tls(TLS* tls_conn)
 {
-    int exit_code = EXIT_FAILURE;
-    int ret = -1;
-
     if (NULL == tls_conn)
     {
         DPRINTF("tls_conn can not be NULL");
-        goto end;
-    }
-
-    if (NULL == tls_ca_cert)
-    {
-        DPRINTF("tls_ca_cert can not be NULL");
-        goto end;
-    }
-
-    ret = mbedtls_x509_crt_parse(&tls_conn->ca_cert, (const unsigned char*)tls_ca_cert,
-                                 GetStringLen(tls_ca_cert, TLS_CA_CERT_SIZE) + 1);
-    if (ret < 0)
-    {
-        DPRINTF("mbedtls_x509_crt_parse failed: -0x%04x", -ret);
-        goto end;
-    }
-
-    if (ret > 0)
-    {
-        DPRINTF("warning: %d certificates in CA bundle failed to parse", ret);
-    }
-
-    mbedtls_ssl_conf_ca_chain(&tls_conn->conf, &tls_conn->ca_cert, NULL);
-
-    exit_code = EXIT_SUCCESS;
-
-end:
-    return exit_code;
-}
-
-/**
- * @brief Custom send function for mbed TLS
- * 
- * @param[in] ctx TLS connection context
- * @param[in] buf Data buffer to send
- * @param[in] len Length of data to send
- * @return int Number of bytes sent, or mbed TLS error code
- */
-static int TLSSend(void* ctx, const unsigned char* buf, size_t len)
-{
-    TLS* tls_conn = (TLS*)ctx;
-    ssize_t sent = -1;
-    size_t total_sent = 0;
-
-    if (len > INT_MAX)
-    {
-        len = INT_MAX;
-    }
-
-    for (;;)
-    {
-        sent = send(tls_conn->sock, buf + total_sent, len - total_sent, MSG_NOSIGNAL);
-        if (0 < sent)
-        {
-            total_sent += (size_t)sent;
-            if (total_sent >= len)
-            {
-                return (int)len;
-            }
-            continue;
-        }
-
-        if (0 == sent)
-        {
-            return MBEDTLS_ERR_NET_CONN_RESET;
-        }
-
-        if (EINTR == errno)
-        {
-            continue;
-        }
-
-        if (EAGAIN == errno || EWOULDBLOCK == errno)
-        {
-            if (total_sent > 0)
-            {
-                return (int)total_sent;
-            }
-            return MBEDTLS_ERR_SSL_WANT_WRITE;
-        }
-
-        return MBEDTLS_ERR_NET_SEND_FAILED;
-    }
-}
-
-/**
- * @brief Custom receive function for mbed TLS
- * 
- * @param[in] ctx TLS connection context
- * @param[out] buf Buffer to store received data
- * @param[in] len Maximum bytes to receive
- * @return int Number of bytes received, or mbed TLS error code
- */
-static int TLSRecv(void* ctx, unsigned char* buf, size_t len)
-{
-    TLS* tls_conn = (TLS*)ctx;
-    ssize_t received = -1;
-
-    if (len > INT_MAX)
-    {
-        len = INT_MAX;
-    }
-
-    for (;;)
-    {
-        received = recv(tls_conn->sock, buf, len, 0);
-        if (0 < received)
-        {
-            return (int)received;
-        }
-
-        if (0 == received)
-        {
-            return MBEDTLS_ERR_NET_CONN_RESET;
-        }
-
-        if (EINTR == errno)
-        {
-            continue;
-        }
-
-        if (EAGAIN == errno || EWOULDBLOCK == errno)
-        {
-            return MBEDTLS_ERR_SSL_WANT_READ;
-        }
-
-        return MBEDTLS_ERR_NET_RECV_FAILED;
-    }
-}
-
-/**
- * @brief Perform TLS handshake and establish secure connection
- * 
- * @param[in,out] tls_conn TLS connection structure
- * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
- */
-static int EstablishTLSConnection(TLS* tls_conn)
-{
-    int exit_code = EXIT_FAILURE;
-    int ret = -1;
-    uint32_t verify_flags = 0;
-    char verify_buf[512] = {0};
-    char err_buf[128] = {0};
-
-    if (NULL == tls_conn)
-    {
-        DPRINTF("tls_conn can not be NULL");
-        goto end;
-    }
-
-    ret = mbedtls_ssl_conf_own_cert(&tls_conn->conf, &tls_conn->cert, &tls_conn->pkey);
-    if (0 != ret)
-    {
-        DPRINTF("mbedtls_ssl_conf_own_cert failed: -0x%04x", -ret);
-        goto end;
-    }
-
-    ret = mbedtls_ssl_setup(&tls_conn->ssl, &tls_conn->conf);
-    if (0 != ret)
-    {
-        DPRINTF("mbedtls_ssl_setup failed: -0x%04x", -ret);
-        goto end;
-    }
-
-    mbedtls_ssl_set_bio(&tls_conn->ssl, tls_conn, TLSSend, TLSRecv, NULL);
-
-    while (MBEDTLS_ERR_SSL_WANT_READ == (ret = mbedtls_ssl_handshake(&tls_conn->ssl)) ||
-           MBEDTLS_ERR_SSL_WANT_WRITE == ret)
-    {
-        continue;
-    }
-
-    if (0 != ret)
-    {
-        mbedtls_strerror(ret, err_buf, sizeof(err_buf));
-        DPRINTF("mbedtls_ssl_handshake failed: -0x%04x %s", -ret, err_buf);
-        goto end;
-    }
-
-    verify_flags = mbedtls_ssl_get_verify_result(&tls_conn->ssl);
-    if (0 != verify_flags)
-    {
-        mbedtls_x509_crt_verify_info(verify_buf, sizeof(verify_buf), "  ! ", verify_flags);
-        DPRINTF("certificate verification failed: 0x%08x\n%s", verify_flags, verify_buf);
-        goto end;
-    }
-
-    tls_conn->connected = 1;
-    exit_code = EXIT_SUCCESS;
-
-end:
-    return exit_code;
-}
-
-/**
- * @brief Clean up TLS resources and free memory
- * 
- * @param[in,out] tls_conn TLS connection structure to cleanup
- */
-static void CleanupTLS(TLS* tls_conn)
-{
-    if (NULL == tls_conn)
-    {
         return;
     }
 
-    if (tls_conn->connected)
+    if (NULL != tls_conn->ssl)
     {
-        mbedtls_ssl_close_notify(&tls_conn->ssl);
+        wolfSSL_shutdown(tls_conn->ssl);
+        wolfSSL_free(tls_conn->ssl);
+        tls_conn->ssl = NULL;
     }
 
-    mbedtls_ssl_free(&tls_conn->ssl);
-    mbedtls_ssl_config_free(&tls_conn->conf);
-    mbedtls_x509_crt_free(&tls_conn->cert);
-    mbedtls_x509_crt_free(&tls_conn->ca_cert);
-    mbedtls_pk_free(&tls_conn->pkey);
-    mbedtls_entropy_free(&tls_conn->entropy);
-    mbedtls_ctr_drbg_free(&tls_conn->ctr_drbg);
+    if (NULL != tls_conn->ctx)
+    {
+        wolfSSL_CTX_free(tls_conn->ctx);
+        tls_conn->ctx = NULL;
+    }
 }
+

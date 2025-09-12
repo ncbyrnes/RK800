@@ -3,7 +3,6 @@ import socket
 import struct
 import logging
 from typing import Optional
-from rk800 import CertManager
 
 logger = logging.getLogger(__name__)
 
@@ -114,12 +113,10 @@ class Tls:
         self.ssl_context: Optional[ssl.SSLContext] = None
         self.is_running = False
         
-        cert_manager = CertManager()
-        tls_config = cert_manager.get_server_tls_config()
-        
-        self.server_cert = tls_config["server_cert"]
-        self.server_key = tls_config["server_key"] 
-        self.ca_cert = tls_config["ca_cert"]
+        # TODO: Implement CertManager integration
+        self.server_cert = ""
+        self.server_key = "" 
+        self.ca_cert = ""
         
     def _create_ssl_context(self) -> ssl.SSLContext:
         """Create SSL context for mutual TLS authentication

@@ -20,12 +20,6 @@ def create_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    parser.add_argument(
-        "-d", "--debug",
-        action="store_true",
-        help="enable debug logging"
-    )
-
     subparsers = parser.add_subparsers(dest="command", help="available commands")
 
     # configure client
@@ -60,11 +54,21 @@ def create_parser():
     configure_parser.add_argument(
         "-o", "--output", type=str, default="configured.apk", help="output APK file path, default: configured.apk"
     )
+    configure_parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="enable debug logging"
+    )
 
     # listen
     listen_parser = subparsers.add_parser("listen", help="start listening")
     listen_parser.add_argument("listen_addr", help="address to bind to")
     listen_parser.add_argument("listen_port", type=int, help="port to listen on")
+    listen_parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="enable debug logging"
+    )
 
     if argcomplete:
         argcomplete.autocomplete(parser)

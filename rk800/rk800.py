@@ -4,6 +4,7 @@ import logging
 from rk800.parse import parse_args
 from rk800.command import CommandHandler
 
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -14,6 +15,11 @@ def run():
     """
     try:
         args = parse_args()
+        
+        if hasattr(args, 'debug') and args.debug:
+            logging.getLogger().setLevel(logging.DEBUG)
+            logger.debug("Debug logging enabled")
+        
         handler = CommandHandler()
         handler.dispatch_command(args)
 

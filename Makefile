@@ -119,3 +119,29 @@ lint:linux_x86_64
 
 wheel: release apk
 	python3 -m build --wheel
+
+tls-certs:
+	@mkdir -p /tmp/tls_test
+	@echo "Generating CA private key..."
+	env OPENSSL_CONF=/dev/null openssl ecparam -genkey -name secp256r1 -out /tmp/tls_test/ca.key
+	@echo "Generating CA certificate..."
+	env OPENSSL_CONF=/dev/null openssl req -new -x509 -key /tmp/tls_test/ca.key -out /tmp/tls_test/ca.crt -days 365 -subj "/CN=Test CA"
+	@echo "Generating server private key..."
+	env OPENSSL_CONF=/dev/null openssl ecparam -genkey -name secp256r1 -out /tmp/tls_test/server_ec.key
+	@echo "Generating server certificate request..."
+	env OPENSSL_CONF=/dev/null openssl req -new -key /tmp/tls_test/server_ec.key -out /tmp/tls_test/server_ec.csr -subj "/CN=localhost"
+	@echo "Signing server certificate..."
+	env OPENSSL_CONF=/dev/null openssl x509 -req -in /tmp/tls_test/server_ec.csr -CA /tmp/tls_test/ca.crt -CAkey /tmp/tls_test/ca.key -CAcreateserial -out /tmp/tls_test/server_ec.crt -days 365
+	@echo "Generating client private key..."
+	env OPENSSL_CONF=/dev/null openssl ecparam -genkey -name secp256r1 -out /tmp/tls_test/client_ec.key
+	@echo "Generating client certificate request..."
+	env OPENSSL_CONF=/dev/null openssl req -new -key /tmp/tls_test/client_ec.key -out /tmp/tls_test/client_ec.csr -subj "/CN=test-client"
+	@echo "Signing client certificate..."
+	env OPENSSL_CONF=/dev/null openssl x509 -req -in /tmp/tls_test/client_ec.csr -CA /tmp/tls_test/ca.crt -CAkey /tmp/tls_test/ca.key -CAcreateserial -out /tmp/tls_test/client_ec.crt -days 365
+	@echo "TLS certificates generated in /tmp/tls_test/"
+	@ls -la /tmp/tls_test/
+
+tls-test: tls-certs
+	@mkdir -p build/linux_x86_64_debug
+	cmake -S . -B ./build/linux_x86_64_debug $(CMAKE_COMMON_ARGS) -DCMAKE_BUILD_TYPE=Debug
+	cmake --build ./build/linux_x86_64_debug --target tls_test
