@@ -6,7 +6,6 @@ project(RK800
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# set build type to release by default and add NDEBUG define for release builds
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -35,6 +34,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rk800/assets)
 
 option(BUILD_CLIENT "Build client project" ON)
+
+set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests.")
+set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbed TLS programs.")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries.")
 
 if(BUILD_CLIENT)
     add_subdirectory(client/)

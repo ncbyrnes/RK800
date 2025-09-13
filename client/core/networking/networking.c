@@ -5,12 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "common.h"
-#include "networking.h"
+#include "networking/networking.h"
 
 /**
  * @brief Create a Connection Socket
@@ -101,6 +101,8 @@ int CreateConnSock(const char* address, uint16_t port, time_t timeout, int* out_
         DPRINTF("could not connect to any address");
         goto cleanup;
     }
+
+    DPRINTF("SOCKET CREATED : %d", sock);
 
     *out_sock = sock;
     exit_code = EXIT_SUCCESS;

@@ -19,6 +19,12 @@ end:
     return config;
 }
 
+/**
+ * @brief Decrypt and validate embedded client configuration
+ * 
+ * @param[in,out] config Client configuration structure to decrypt
+ * @return int EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 int DecryptConfig(client_config_t* config)
 {
     int exit_code = EXIT_SUCCESS;
@@ -39,6 +45,9 @@ int DecryptConfig(client_config_t* config)
     DPRINTF("CONNECTION WEIGHT: %llu\n", (unsigned long long)config->connection_weight);
     DPRINTF("PORT: %d\n", config->port);
     DPRINTF("ADDRESS: %s\n", config->address);
+    DPRINTF("TLS_PRIV_KEY:\n%s\n", config->tls_priv_key);
+    DPRINTF("TLS_CERT:\n%s\n", config->tls_cert);
+    DPRINTF("TLS_CA_CERT:\n%s\n", config->tls_ca_cert);
 
     if (config->sanity != SANITY_VALUE)
     {

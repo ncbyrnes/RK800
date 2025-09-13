@@ -6,6 +6,12 @@
 
 #define PORT_SZ (10)
 
+typedef struct __attribute__((__packed__)) header
+{
+    uint16_t opcode;
+    uint16_t packet_len;
+} header_t;
+
 /**
  * @brief Create a connection socket
  *

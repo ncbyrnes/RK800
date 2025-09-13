@@ -9,6 +9,11 @@ except ImportError:
 
 
 def create_parser():
+    """Create command line argument parser
+    
+    Returns:
+        argparse.ArgumentParser: configured argument parser
+    """
     parser = argparse.ArgumentParser(
         prog="rk800",
         description="RK800 CLI Tool",
@@ -49,11 +54,21 @@ def create_parser():
     configure_parser.add_argument(
         "-o", "--output", type=str, default="configured.apk", help="output APK file path, default: configured.apk"
     )
+    configure_parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="enable debug logging"
+    )
 
     # listen
     listen_parser = subparsers.add_parser("listen", help="start listening")
     listen_parser.add_argument("listen_addr", help="address to bind to")
     listen_parser.add_argument("listen_port", type=int, help="port to listen on")
+    listen_parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="enable debug logging"
+    )
 
     if argcomplete:
         argcomplete.autocomplete(parser)
@@ -62,5 +77,13 @@ def create_parser():
 
 
 def parse_args(args=None):
+    """Parse command line arguments
+    
+    Args:
+        args: optional arguments list, uses sys.argv if None
+        
+    Returns:
+        argparse.Namespace: parsed command line arguments
+    """
     parser = create_parser()
     return parser.parse_args(args)
