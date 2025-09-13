@@ -13,8 +13,8 @@
 #define ERROR_BUFFER_SZ (80)
 
 static void cleanup_tls(TLS* tls_conn);
-static int LoadFromBuffer(WOLFSSL_CTX* ctx, const char* data, size_t max_cert_len, 
-                         WolfSslLoadFunc loader_func, const char* func_name);
+static int LoadFromBuffer(WOLFSSL_CTX* ctx, const char* data, size_t max_cert_len,
+                          WolfSslLoadFunc loader_func, const char* func_name);
 
 int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert,
                         const char* tls_ca_cert, TLS** tls)
@@ -25,13 +25,15 @@ int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert
     int i = 0;
     char buffer[ERROR_BUFFER_SZ] = {0};
     TLS* tls_conn = NULL;
-    
+
     cert_config_t cert_configs[] = {
-        {tls_ca_cert, TLS_CA_CERT_SIZE, wolfSSL_CTX_load_verify_buffer, "wolfSSL_CTX_load_verify_buffer"},
-        {tls_cert, TLS_CERT_SIZE, wolfSSL_CTX_use_certificate_buffer, "wolfSSL_CTX_use_certificate_buffer"}, 
-        {tls_priv_key, TLS_PRIV_KEY_SIZE, wolfSSL_CTX_use_PrivateKey_buffer, "wolfSSL_CTX_use_PrivateKey_buffer"}
-    };
-    
+        {tls_ca_cert, TLS_CA_CERT_SIZE, wolfSSL_CTX_load_verify_buffer,
+         "wolfSSL_CTX_load_verify_buffer"},
+        {tls_cert, TLS_CERT_SIZE, wolfSSL_CTX_use_certificate_buffer,
+         "wolfSSL_CTX_use_certificate_buffer"},
+        {tls_priv_key, TLS_PRIV_KEY_SIZE, wolfSSL_CTX_use_PrivateKey_buffer,
+         "wolfSSL_CTX_use_PrivateKey_buffer"}};
+
     if (sock < 0)
     {
         DPRINTF("sock can not be less than 0");
@@ -56,7 +58,6 @@ int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert
         DPRINTF("wolfSSL_Init failed with code %d", ret);
         goto end;
     }
-
 
     tls_conn = calloc(1, sizeof(*tls_conn));
     if (NULL == tls_conn)
@@ -89,9 +90,9 @@ int CreateTLSConnection(int sock, const char* tls_priv_key, const char* tls_cert
                 continue;
             }
         }
-        
+
         if (LoadFromBuffer(tls_conn->ctx, cert_configs[i].data, cert_configs[i].max_len,
-                          cert_configs[i].func, cert_configs[i].func_name))
+                           cert_configs[i].func, cert_configs[i].func_name))
         {
             DPRINTF("%s failed", cert_configs[i].func_name);
             goto exit;
@@ -147,8 +148,8 @@ void TLSShutdown(TLS* tls)
     wolfSSL_Cleanup();
 }
 
-static int LoadFromBuffer(WOLFSSL_CTX* ctx, const char* data, size_t max_cert_len, 
-                         WolfSslLoadFunc loader_func, const char* func_name)
+static int LoadFromBuffer(WOLFSSL_CTX* ctx, const char* data, size_t max_cert_len,
+                          WolfSslLoadFunc loader_func, const char* func_name)
 {
     int exit_code = EXIT_FAILURE;
     int ret = -1;
@@ -171,8 +172,8 @@ static int LoadFromBuffer(WOLFSSL_CTX* ctx, const char* data, size_t max_cert_le
         goto end;
     }
 
-    ret = loader_func(ctx, (const unsigned char*)data, 
-                     (long)GetStringLen(data, max_cert_len), WOLFSSL_FILETYPE_PEM);
+    ret = loader_func(ctx, (const unsigned char*)data, (long)GetStringLen(data, max_cert_len),
+                      WOLFSSL_FILETYPE_PEM);
     if (ret != WOLFSSL_SUCCESS)
     {
         DPRINTF("%s failed with code %d", func_name, ret);
@@ -205,5 +206,6 @@ static void cleanup_tls(TLS* tls_conn)
         wolfSSL_CTX_free(tls_conn->ctx);
         tls_conn->ctx = NULL;
     }
-}
 
+    NFREE(tls_conn);
+}

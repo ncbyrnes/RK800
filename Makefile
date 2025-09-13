@@ -143,5 +143,5 @@ tls-certs:
 
 tls-test: tls-certs
 	@mkdir -p build/linux_x86_64_debug
-	cmake -S . -B ./build/linux_x86_64_debug $(CMAKE_COMMON_ARGS) -DCMAKE_BUILD_TYPE=Debug
+	cmake -S . -B ./build/linux_x86_64_debug $(CMAKE_COMMON_ARGS) -DCMAKE_BUILD_TYPE=Debug -DBUILD_TLS_TEST=ON
 	cmake --build ./build/linux_x86_64_debug --target tls_test

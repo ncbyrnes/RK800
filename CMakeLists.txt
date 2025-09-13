@@ -6,7 +6,6 @@ project(RK800
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# set build type to release by default and add NDEBUG define for release builds
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()

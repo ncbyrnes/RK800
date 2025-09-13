@@ -52,7 +52,7 @@ int StartClient(client_config_t* config)
 
 cleanup:
     if (tls_conn) {
-        NFREE(tls_conn);
+        TLSShutdown(tls_conn);
     }
 end:
     close(sock);
@@ -64,7 +64,7 @@ static int SendTLSPacket(TLS* tls_conn, uint16_t opcode, const char* data, size_
     header_t header;
     int ret = 0;
     
-    if (NULL == tls_conn || !tls_conn->connected)
+    if (NULL == tls_conn || NULL == tls_conn->ssl)
     {
         DPRINTF("TLS connection not established\n");
         return EXIT_FAILURE;
@@ -73,7 +73,7 @@ static int SendTLSPacket(TLS* tls_conn, uint16_t opcode, const char* data, size_
     header.opcode = htons(opcode);
     header.packet_len = htons((uint16_t)data_len);
     
-    ret = mbedtls_ssl_write(&tls_conn->ssl, (unsigned char*)&header, sizeof(header));
+    ret = wolfSSL_write(tls_conn->ssl, (unsigned char*)&header, sizeof(header));
     if (ret <= 0)
     {
         DPRINTF("Failed to send TLS packet header: %d\n", ret);
@@ -82,7 +82,7 @@ static int SendTLSPacket(TLS* tls_conn, uint16_t opcode, const char* data, size_
     
     if (data_len > 0 && data != NULL)
     {
-        ret = mbedtls_ssl_write(&tls_conn->ssl, (const unsigned char*)data, data_len);
+        ret = wolfSSL_write(tls_conn->ssl, (const unsigned char*)data, (int)data_len);
         if (ret <= 0)
         {
             DPRINTF("Failed to send TLS packet data: %d\n", ret);
