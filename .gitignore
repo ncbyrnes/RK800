@@ -19,3 +19,5 @@ loader/.idea
 venv
 *.a
 *.pcap
+*.keystore
+debug.keystore

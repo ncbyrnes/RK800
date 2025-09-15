@@ -1,6 +1,5 @@
 import json
 import os
-import logging
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,25 +8,18 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
 
-logger = logging.getLogger(__name__)
 
+class RK800CertStore:
+    """TLS certificate management for mutual auth"""
 
-class CertManager:
-    """Certificate manager for generating and managing TLS certificates
-    
-    Handles CA certificate creation, server certificates, and client certificates
-    for mutual TLS authentication.
-    """
     TLS_CONFIG_FILE = "rk800keys.json"
     CA_VALIDITY_DAYS = 3650  # 10 years
-    CERT_VALIDITY_DAYS = 3650  # 10 years
+    CERT_VALIDITY_DAYS = 3650
+
+    def __init__(self, ctx):
+        self.ctx = ctx
 
     def get_server_tls_config(self) -> dict:
-        """Get server TLS configuration
-        
-        Returns:
-            dict: server key, cert, and CA cert for TLS setup
-        """
         config = self.load_or_create_tls_config()
         return {
             "server_key": config["server_key"],
@@ -36,39 +28,31 @@ class CertManager:
         }
 
     def load_or_create_tls_config(self) -> dict:
-        """Load existing TLS config or create new certificates
-        
-        Returns:
-            dict: complete TLS configuration with all certificates and keys
-        """
-        path = Path.cwd() / self.TLS_CONFIG_FILE
-        if path.exists():
+        config_file_path = Path.cwd() / self.TLS_CONFIG_FILE
+        if config_file_path.exists():
             try:
-                with path.open("r", encoding="utf-8") as file:
+                with config_file_path.open("r", encoding="utf-8") as file:
                     config = json.load(file)
                 if self._validate_ca_cert(config):
                     return config
-                logger.info("CA or server certificate expired or invalid, regenerating")
-                path.unlink()
+                self.ctx.view.info(
+                    "CA or server certificate expired or invalid, regenerating"
+                )
+                config_file_path.unlink()
             except (json.JSONDecodeError, KeyError, OSError):
-                logger.info("Invalid TLS config file, regenerating")
-                path.unlink(missing_ok=True)
+                self.ctx.view.info("Invalid TLS config file, regenerating")
+                config_file_path.unlink(missing_ok=True)
 
         config = self._generate_ca_keys_dict()
-        temp_path = path.with_suffix(".tmp")
+        temp_path = config_file_path.with_suffix(".tmp")
         with temp_path.open("w", encoding="utf-8") as file:
             json.dump(config, file, indent=2)
         os.chmod(temp_path, 0o600)
-        temp_path.replace(path)
-        logger.info(f"Generated new CA certificate in {path}")
+        temp_path.replace(config_file_path)
+        self.ctx.view.success(f"generated new certs -> {config_file_path}")
         return config
 
     def generate_client_cert(self) -> dict:
-        """Generate new client certificate signed by CA
-        
-        Returns:
-            dict: client key, cert, and CA cert for client authentication
-        """
         config = self.load_or_create_tls_config()
         try:
             ca_key_obj = serialization.load_pem_private_key(
@@ -86,31 +70,10 @@ class CertManager:
         }
 
     def _now(self):
-        """Get current UTC time
-        
-        Returns:
-            datetime: current UTC datetime
-        """
         return datetime.now(timezone.utc)
 
-    def _create_key_usage(
-        self,
-        digital_signature=False,
-        key_encipherment=False,
-        key_cert_sign=False,
-        crl_sign=False,
-    ):
-        """Create X.509 key usage extension
-        
-        Args:
-            digital_signature (bool): enable digital signature usage
-            key_encipherment (bool): enable key encipherment usage
-            key_cert_sign (bool): enable certificate signing usage
-            crl_sign (bool): enable CRL signing usage
-            
-        Returns:
-            x509.KeyUsage: configured key usage extension
-        """
+    def _create_key_usage(self, digital_signature=False, key_encipherment=False,
+                         key_cert_sign=False, crl_sign=False):
         return x509.KeyUsage(
             digital_signature=digital_signature,
             content_commitment=False,
@@ -123,27 +86,19 @@ class CertManager:
             decipher_only=False,
         )
 
-    def _serialize_private_key(self, private_key):
-        return private_key.private_bytes(
+    def _serialize_private_key(self, key):
+        return key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption(),
         ).decode()
 
     def _serialize_certificate(self, certificate):
-        """Serialize certificate to PEM format
-        
-        Args:
-            certificate: cryptography certificate object
-            
-        Returns:
-            str: PEM encoded certificate
-        """
         return certificate.public_bytes(serialization.Encoding.PEM).decode()
 
-    def _generate_ca_cert(self):
+    def _generate_root_ca(self):
         """Generate CA certificate and private key
-        
+
         Returns:
             tuple: CA private key and certificate objects
         """
@@ -174,11 +129,11 @@ class CertManager:
 
     def _generate_client_cert(self, ca_key, ca_cert):
         """Generate client certificate signed by CA
-        
+
         Args:
             ca_key: CA private key object
             ca_cert: CA certificate object
-            
+
         Returns:
             tuple: client private key and certificate objects
         """
@@ -217,11 +172,11 @@ class CertManager:
 
     def _generate_server_cert(self, ca_key, ca_cert):
         """Generate server certificate signed by CA
-        
+
         Args:
             ca_key: CA private key object
             ca_cert: CA certificate object
-            
+
         Returns:
             tuple: server private key and certificate objects
         """
@@ -266,11 +221,11 @@ class CertManager:
 
     def _generate_ca_keys_dict(self):
         """Generate complete CA and server certificate set
-        
+
         Returns:
             dict: CA key, CA cert, server key, and server cert in PEM format
         """
-        ca_key, ca_cert = self._generate_ca_cert()
+        ca_key, ca_cert = self._generate_root_ca()
         server_key, server_cert = self._generate_server_cert(ca_key, ca_cert)
         return {
             "ca_key": self._serialize_private_key(ca_key),
@@ -280,64 +235,24 @@ class CertManager:
         }
 
     def _validate_ca_cert(self, config: dict) -> bool:
-        """Validate CA and server certificates are valid and not expired
-        
-        Args:
-            config (dict): TLS configuration with certificates
-            
-        Returns:
-            bool: True if certificates are valid, False otherwise
-        """
         try:
-            logger.debug("Starting CA certificate validation")
-            
-            required_keys = ["ca_cert", "ca_key", "server_cert", "server_key"]
-            missing_keys = [key for key in required_keys if key not in config]
-            if missing_keys:
-                logger.warning(f"Missing required keys in config: {missing_keys}")
+            required = ["ca_cert", "ca_key", "server_cert", "server_key"]
+            if not all(k in config for k in required):
                 return False
-            logger.debug("All required keys present in config")
 
-            logger.debug("Loading CA certificate")
             ca_cert = x509.load_pem_x509_certificate(config["ca_cert"].encode())
-            logger.debug("Loading server certificate")
             server_cert = x509.load_pem_x509_certificate(config["server_cert"].encode())
             now = self._now()
-            logger.debug(f"Current time: {now}")
 
-            # Convert certificate times to timezone-aware for comparison
-            ca_not_before = ca_cert.not_valid_before.replace(tzinfo=timezone.utc)
-            ca_not_after = ca_cert.not_valid_after.replace(tzinfo=timezone.utc)
-            server_not_before = server_cert.not_valid_before.replace(tzinfo=timezone.utc)
-            server_not_after = server_cert.not_valid_after.replace(tzinfo=timezone.utc)
+            # check expiry
+            if ca_cert.not_valid_after_utc <= now or server_cert.not_valid_after_utc <= now:
+                return False
 
-            logger.debug(f"CA cert valid from {ca_not_before} to {ca_not_after}")
-            if ca_not_after <= now:
-                logger.warning(f"CA certificate expired: {ca_not_after} <= {now}")
+            # check not-yet-valid
+            if ca_cert.not_valid_before_utc > now or server_cert.not_valid_before_utc > now:
                 return False
-            if ca_not_before > now:
-                logger.warning(f"CA certificate not yet valid: {ca_not_before} > {now}")
-                return False
-            logger.debug("CA certificate time validity OK")
 
-            logger.debug(f"Server cert valid from {server_not_before} to {server_not_after}")
-            if server_not_after <= now:
-                logger.warning(f"Server certificate expired: {server_not_after} <= {now}")
-                return False
-            if server_not_before > now:
-                logger.warning(f"Server certificate not yet valid: {server_not_before} > {now}")
-                return False
-            logger.debug("Server certificate time validity OK")
-
-            logger.debug(f"CA cert subject: {ca_cert.subject}")
-            logger.debug(f"Server cert issuer: {server_cert.issuer}")
-            if server_cert.issuer != ca_cert.subject:
-                logger.warning(f"Server certificate issuer mismatch: {server_cert.issuer} != {ca_cert.subject}")
-                return False
-            logger.debug("Certificate chain validation OK")
-
-            logger.info("CA certificate validation successful")
-            return True
-        except (ValueError, TypeError, KeyError) as error:
-            logger.error(f"Exception during CA certificate validation: {type(error).__name__}: {error}")
+            # verify chain
+            return server_cert.issuer == ca_cert.subject
+        except:
             return False
