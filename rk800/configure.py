@@ -1,4 +1,4 @@
-from rk800.tls_cert import CertManager
+from rk800.tls_cert import RK800CertStore
 from rk800.apk_repack import APKRepack
 import argparse
 import tempfile
@@ -30,7 +30,7 @@ class Configure:
         self.output_path = output_path
         self.args = args
         self.ctx = ctx
-        self.cert_manager = CertManager(self.ctx)
+        self.cert_manager = RK800CertStore(self.ctx)
 
     def _pack_client_config(self, args: argparse.Namespace) -> bytes:
         """Pack client configuration into binary format

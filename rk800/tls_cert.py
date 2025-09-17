@@ -72,8 +72,13 @@ class RK800CertStore:
     def _now(self):
         return datetime.now(timezone.utc)
 
-    def _create_key_usage(self, digital_signature=False, key_encipherment=False,
-                         key_cert_sign=False, crl_sign=False):
+    def _create_key_usage(
+        self,
+        digital_signature=False,
+        key_encipherment=False,
+        key_cert_sign=False,
+        crl_sign=False,
+    ):
         return x509.KeyUsage(
             digital_signature=digital_signature,
             content_commitment=False,
@@ -245,11 +250,17 @@ class RK800CertStore:
             now = self._now()
 
             # check expiry
-            if ca_cert.not_valid_after_utc <= now or server_cert.not_valid_after_utc <= now:
+            if (
+                ca_cert.not_valid_after_utc <= now
+                or server_cert.not_valid_after_utc <= now
+            ):
                 return False
 
             # check not-yet-valid
-            if ca_cert.not_valid_before_utc > now or server_cert.not_valid_before_utc > now:
+            if (
+                ca_cert.not_valid_before_utc > now
+                or server_cert.not_valid_before_utc > now
+            ):
                 return False
 
             # verify chain

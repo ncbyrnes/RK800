@@ -17,6 +17,12 @@ class CommandStatus(Enum):
     FINISHED = "FINISHED"
 
 
+class CommandResults(Enum):
+    NONE = "NONE"
+    ERROR = "ERROR"
+    SUCCESS = "SUCCESS"
+
+
 class RK800Cmd(ABC):
     """Base class for RK800 commands"""
 
@@ -30,6 +36,8 @@ class RK800Cmd(ABC):
         self.ctx = ctx
         self.parsed = False
         self.status = CommandStatus.QUEUED
+        self.result = CommandResults.NONE
+        self.output_cache = []
 
     @abstractmethod
     def parse(self):

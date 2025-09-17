@@ -23,6 +23,12 @@ from rk800.command_types import Opcode
 SELECT_TIMEOUT = 0.1
 SOCKET_TIMEOUT = 3.0
 TEMP_FILE_MODE = 0o600
+SOCKET_REUSE_ENABLED = 1
+SERVER_SOCKET_TIMEOUT = 5.0
+ACCEPT_SOCKET_TIMEOUT = 1.0
+CLIENT_SOCKET_TIMEOUT = 30.0
+ACCEPT_RETRY_DELAY = 0.1
+THREAD_JOIN_TIMEOUT = 5.0
 
 
 class ClientState(Enum):
@@ -148,7 +154,9 @@ class Tls:
             self.ssl_context = self._create_ssl_context()
 
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, SOCKET_REUSE_ENABLED)
+            self.server_socket.setsockopt(
+                socket.SOL_SOCKET, socket.SO_REUSEADDR, SOCKET_REUSE_ENABLED
+            )
             self.server_socket.settimeout(SERVER_SOCKET_TIMEOUT)
 
             self.server_socket.bind((self.address, self.port))
@@ -293,7 +301,6 @@ class Tls:
 
     def handle_client(self, ssl_socket) -> None:
         self.client_handler.handle_client_session(ssl_socket, self.stop_event)
-
 
     def start_threaded(self):
         if self.is_running:

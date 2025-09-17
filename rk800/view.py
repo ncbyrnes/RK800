@@ -10,7 +10,6 @@ class ViewManager:
     def __init__(self):
         self.debug_enabled = False
 
-        # Color theme
         self.colors = {
             "success": "#98fb98",
             "warning": "#f0e68c",
@@ -21,7 +20,6 @@ class ViewManager:
             "prompt": "#ffc0cb",
         }
 
-        # Message prefixes
         self.prefixes = {
             "success": "[+]",
             "warning": "[!]",

@@ -40,6 +40,8 @@ class CLICommandProcessor:
             return self.command_handlers[command]()
         elif command.startswith("echo "):
             return self._handle_echo(command)
+        elif command.startswith("result"):
+            return self._handle_result(command)
         else:
             self.ctx.view.error(
                 f"Unknown command: '{command}'. Type 'help' for available commands."
@@ -57,6 +59,9 @@ class CLICommandProcessor:
         self.ctx.view.info("  clear      - Clear the screen")
         self.ctx.view.info("  echo <msg> - Queue echo command to send to clients")
         self.ctx.view.info("  queue      - Show queued commands and their status")
+        self.ctx.view.info(
+            "  result     - Show command results (use -i <id> for specific command)"
+        )
         return True
 
     def _handle_clear(self) -> bool:
@@ -69,7 +74,9 @@ class CLICommandProcessor:
             echo_cmd.parse()
             self.ctx.add_command(echo_cmd)
             echo_cmd.execute()
-            self.ctx.view.success(f"Echo command queued: {echo_cmd.message} (ID: {echo_cmd.id})")
+            self.ctx.view.success(
+                f"Echo command queued: {echo_cmd.message} (ID: {echo_cmd.id})"
+            )
         except ParseError as error:
             self.ctx.view.error(f"Parse error: {error}")
         except Exception as error:
@@ -86,14 +93,31 @@ class CLICommandProcessor:
 
             table_data = []
             for cmd in commands:
-                table_data.append([cmd.id, cmd.line, cmd.status.value])
+                table_data.append(
+                    [cmd.id, cmd.line, cmd.status.value, cmd.result.value]
+                )
 
-            headers = ["ID", "Command", "Status"]
-            table = tabulate(table_data, headers=headers, tablefmt="simple", numalign="left")
+            headers = ["ID", "Command", "Status", "Result"]
+            table = tabulate(
+                table_data, headers=headers, tablefmt="simple", numalign="left"
+            )
             self.ctx.view.info(table)
 
         except Exception as error:  # python warcrime but idc for something experimental
             self.ctx.view.error(f"Failed to display queue: {error}")
+        return True
+
+    def _handle_result(self, command: str) -> bool:
+        try:
+            from rk800.work.result import Result
+
+            result_cmd = Result(command, self.ctx)
+            result_cmd.parse()
+            result_cmd.execute()
+        except ParseError as error:
+            self.ctx.view.error(f"Parse error: {error}")
+        except Exception as error:
+            self.ctx.view.error(f"Failed to execute result command: {error}")
         return True
 
 
@@ -101,15 +125,17 @@ class FirstWordCompleter(Completer):
     """Auto-completer that suggests commands based on first word input.
 
     Args:
-        commands: List of command strings to offer as completions 
+        commands: List of command strings to offer as completions
     """
 
     def __init__(self, commands: List[str]) -> None:
         self.commands = commands
 
-    def get_completions(self, document: Document, complete_event: CompleteEvent) -> Generator[Completion, None, None]:
+    def get_completions(
+        self, document: Document, complete_event: CompleteEvent
+    ) -> Generator[Completion, None, None]:
         text = document.text_before_cursor
-        if ' ' not in text:
+        if " " not in text:
             for command in self.commands:
                 if command.startswith(text.lower()):
                     yield Completion(command, start_position=-len(text))
@@ -122,7 +148,7 @@ class RK800CLI:
         self.ctx = ctx
         self.server = server
         self.processor = CLICommandProcessor(ctx)
-        self.commands: List[str] = ["exit", "help", "clear", "echo", "queue"]
+        self.commands: List[str] = ["exit", "help", "clear", "echo", "queue", "result"]
         self.completer = FirstWordCompleter(self.commands)
         self.session = PromptSession(completer=self.completer)
         self.running = True
@@ -163,10 +189,7 @@ class CommandHandler:
 
     def __init__(self, ctx: RK800Context) -> None:
         self.ctx = ctx
-        self.command_registry = {
-            "config": self.configure,
-            "listen": self.listen
-        }
+        self.command_registry = {"config": self.configure, "listen": self.listen}
 
     def configure(self, args: argparse.Namespace) -> None:
         self.ctx.view.debug(f"Configure called with args: {args}")
@@ -181,11 +204,11 @@ class CommandHandler:
 
     def listen(self, args: argparse.Namespace) -> None:
         try:
-            from rk800.tls_cert import CertManager
+            from rk800.tls_cert import RK800CertStore
 
             server = Tls(args.listen_addr, args.listen_port, self.ctx)
 
-            cert_manager = CertManager(self.ctx)
+            cert_manager = RK800CertStore(self.ctx)
             tls_config = cert_manager.get_server_tls_config()
             server.server_cert = tls_config["server_cert"]
             server.server_key = tls_config["server_key"]
@@ -208,5 +231,7 @@ class CommandHandler:
         command_func = self.command_registry.get(args.command)
         if not command_func:
             available_commands = ", ".join(self.command_registry.keys())
-            raise ValueError(f"Unknown command '{args.command}'. Available commands: {available_commands}")
+            raise ValueError(
+                f"Unknown command '{args.command}'. Available commands: {available_commands}"
+            )
         command_func(args)
