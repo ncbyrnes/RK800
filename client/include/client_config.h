@@ -17,7 +17,7 @@ typedef struct __attribute__((__packed__)) client_config
     uint16_t port;
     uint64_t beacon_interval;
     int64_t beacon_jitter;
-    uint64_t connection_weight;
+    int64_t connection_weight;
     char address[ADDR_LEN];
     char tls_priv_key[TLS_PRIV_KEY_SIZE];
     char tls_cert[TLS_CERT_SIZE];

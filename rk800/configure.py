@@ -15,7 +15,7 @@ class Configure:
     """
 
     CLIENT_CANARY = b"\x41\x39\x31\x54\x21\xff\x3d\xc1\x7a\x45\x1b\x4e\x31\x5d\x36\xc1"
-    CLIENT_FORMAT = "!HHQqQ256s2048s2048s2048s"
+    CLIENT_FORMAT = "!HHQqq256s2048s2048s2048s"
     SEC_IN_MIN = 60
     SANITY = 1987
 
