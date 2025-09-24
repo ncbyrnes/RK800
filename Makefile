@@ -117,7 +117,7 @@ lint:linux_x86_64
 	-CodeChecker parse --export html --output ./codechecker/report ./codechecker
 	firefox ./codechecker/report/index.html &
 
-wheel: release apk
+wheel:
 	python3 -m build --wheel
 
 tls-certs:

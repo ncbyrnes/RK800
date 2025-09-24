@@ -64,13 +64,15 @@ class RK800CertStore:
 
         client_key, client_cert = self._generate_client_cert(ca_key_obj, ca_cert_obj)
         return {
-            "client_key": self._serialize_private_key(client_key),
-            "client_cert": self._serialize_certificate(client_cert),
+            "client_key": client_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            ).decode(),
+            "client_cert": client_cert.public_bytes(serialization.Encoding.PEM).decode(),
             "ca_cert": config["ca_cert"],
         }
 
-    def _now(self):
-        return datetime.now(timezone.utc)
 
     def _create_key_usage(
         self,
@@ -91,15 +93,6 @@ class RK800CertStore:
             decipher_only=False,
         )
 
-    def _serialize_private_key(self, key):
-        return key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption(),
-        ).decode()
-
-    def _serialize_certificate(self, certificate):
-        return certificate.public_bytes(serialization.Encoding.PEM).decode()
 
     def _generate_root_ca(self):
         """Generate CA certificate and private key
@@ -115,8 +108,8 @@ class RK800CertStore:
             .issuer_name(subject)
             .public_key(ca_key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(self._now())
-            .not_valid_after(self._now() + timedelta(days=self.CA_VALIDITY_DAYS))
+            .not_valid_before(datetime.now(timezone.utc))
+            .not_valid_after(datetime.now(timezone.utc) + timedelta(days=self.CA_VALIDITY_DAYS))
             .add_extension(
                 x509.BasicConstraints(ca=True, path_length=None), critical=True
             )
@@ -144,7 +137,7 @@ class RK800CertStore:
         """
         client_key = ec.generate_private_key(ec.SECP256R1())
         subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "CLIENT")])
-        now = self._now()
+        now = datetime.now(timezone.utc)
         builder = (
             x509.CertificateBuilder()
             .subject_name(subject)
@@ -187,7 +180,7 @@ class RK800CertStore:
         """
         server_key = ec.generate_private_key(ec.SECP256R1())
         subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "RK800-SERVER")])
-        now = self._now()
+        now = datetime.now(timezone.utc)
         builder = (
             x509.CertificateBuilder()
             .subject_name(subject)
@@ -233,10 +226,18 @@ class RK800CertStore:
         ca_key, ca_cert = self._generate_root_ca()
         server_key, server_cert = self._generate_server_cert(ca_key, ca_cert)
         return {
-            "ca_key": self._serialize_private_key(ca_key),
-            "ca_cert": self._serialize_certificate(ca_cert),
-            "server_key": self._serialize_private_key(server_key),
-            "server_cert": self._serialize_certificate(server_cert),
+            "ca_key": ca_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            ).decode(),
+            "ca_cert": ca_cert.public_bytes(serialization.Encoding.PEM).decode(),
+            "server_key": server_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            ).decode(),
+            "server_cert": server_cert.public_bytes(serialization.Encoding.PEM).decode(),
         }
 
     def _validate_ca_cert(self, config: dict) -> bool:
@@ -247,7 +248,7 @@ class RK800CertStore:
 
             ca_cert = x509.load_pem_x509_certificate(config["ca_cert"].encode())
             server_cert = x509.load_pem_x509_certificate(config["server_cert"].encode())
-            now = self._now()
+            now = datetime.now(timezone.utc)
 
             # check expiry
             if (

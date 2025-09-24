@@ -3,10 +3,12 @@ import argparse
 import threading
 import asyncio
 import queue
+import shlex
 from pathlib import Path
 from typing import Optional, List, Generator
 from rk800.configure import Configure
-from rk800.networking.tls import Tls
+from rk800.networking.tls import TLS
+from rk800.networking.server import Server
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter, Completer, Completion
 from prompt_toolkit.document import Document
@@ -28,6 +30,8 @@ class CLICommandProcessor:
             "help": self._handle_help,
             "clear": self._handle_clear,
             "queue": self._handle_queue,
+            "echo": self._handle_echo,
+            "result": self._handle_result,
         }
 
     def process_command(self, command: str) -> bool:
@@ -36,23 +40,29 @@ class CLICommandProcessor:
         if not command:
             return True
 
-        if command in self.command_handlers:
-            return self.command_handlers[command]()
-        elif command.startswith("echo "):
-            return self._handle_echo(command)
-        elif command.startswith("result"):
-            return self._handle_result(command)
-        else:
-            self.ctx.view.error(
-                f"Unknown command: '{command}'. Type 'help' for available commands."
-            )
+        try:
+            parts = shlex.split(command)
+            if not parts:
+                return True
+            
+            cmd_name = parts[0]
+            
+            if cmd_name in self.command_handlers:
+                return self.command_handlers[cmd_name](command)
+            else:
+                self.ctx.view.error(
+                    f"Unknown command: '{cmd_name}'. Type 'help' for available commands."
+                )
+                return True
+        except ValueError as error:
+            self.ctx.view.error(f"Invalid command syntax: {error}")
             return True
 
-    def _handle_exit(self) -> bool:
+    def _handle_exit(self, command: str = "") -> bool:
         self.ctx.view.info("Goodbye")
         return False
 
-    def _handle_help(self) -> bool:
+    def _handle_help(self, command: str = "") -> bool:
         self.ctx.view.info("Available commands:")
         self.ctx.view.info("  exit       - Exit the CLI")
         self.ctx.view.info("  help       - Show this help")
@@ -64,7 +74,7 @@ class CLICommandProcessor:
         )
         return True
 
-    def _handle_clear(self) -> bool:
+    def _handle_clear(self, command: str = "") -> bool:
         self.ctx.view.clear_screen()
         return True
 
@@ -73,7 +83,6 @@ class CLICommandProcessor:
             echo_cmd = Echo(command, self.ctx)
             echo_cmd.parse()
             self.ctx.add_command(echo_cmd)
-            echo_cmd.execute()
             self.ctx.view.success(
                 f"Echo command queued: {echo_cmd.message} (ID: {echo_cmd.id})"
             )
@@ -83,7 +92,7 @@ class CLICommandProcessor:
             self.ctx.view.error(f"Failed to queue echo command: {error}")
         return True
 
-    def _handle_queue(self) -> bool:
+    def _handle_queue(self, command: str = "") -> bool:
         try:
             commands = self.ctx.get_commands()
 
@@ -144,7 +153,7 @@ class FirstWordCompleter(Completer):
 class RK800CLI:
     """Interactive CLI interface for RK800 with async prompt toolkit"""
 
-    def __init__(self, ctx: RK800Context, server: Optional[Tls] = None) -> None:
+    def __init__(self, ctx: RK800Context, server: Optional[Server] = None) -> None:
         self.ctx = ctx
         self.server = server
         self.processor = CLICommandProcessor(ctx)
@@ -170,7 +179,7 @@ class RK800CLI:
         self.ctx.view.info("Press TAB for command completion.")
 
     def _should_continue(self) -> bool:
-        return self.running and (not self.server or self.server.is_running)
+        return self.running and (not self.server or self.server.tls.is_running)
 
     async def _get_user_input(self) -> str:
         prompt_text = FormattedText(self.ctx.view.get_prompt_style())
@@ -206,14 +215,15 @@ class CommandHandler:
         try:
             from rk800.tls_cert import RK800CertStore
 
-            server = Tls(args.listen_addr, args.listen_port, self.ctx)
+            tls = TLS(args.listen_addr, args.listen_port, self.ctx)
 
             cert_manager = RK800CertStore(self.ctx)
             tls_config = cert_manager.get_server_tls_config()
-            server.server_cert = tls_config["server_cert"]
-            server.server_key = tls_config["server_key"]
-            server.ca_cert = tls_config["ca_cert"]
+            tls.server_cert = tls_config["server_cert"]
+            tls.server_key = tls_config["server_key"]
+            tls.ca_cert = tls_config["ca_cert"]
 
+            server = Server(tls, self.ctx)
             server.start_threaded()
 
             cli = RK800CLI(self.ctx, server)

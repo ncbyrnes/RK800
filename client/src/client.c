@@ -116,6 +116,7 @@ static int ClientLoop(client_config_t* config, TLS* tls)
     exit_code = EXIT_SUCCESS;
 
 end:
+    DPRINTF("CLIENT LOOP EXITING WITH CODE: %d", exit_code);
     return exit_code;
 }
 

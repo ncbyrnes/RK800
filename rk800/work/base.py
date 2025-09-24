@@ -15,6 +15,7 @@ class CommandStatus(Enum):
     QUEUED = "QUEUED"
     IN_PROGRESS = "IN PROGRESS"
     FINISHED = "FINISHED"
+    EXCEPTION = "EXCEPTION"
 
 
 class CommandResults(Enum):
@@ -29,7 +30,7 @@ class RK800Cmd(ABC):
     _next_id = 1
 
     def __init__(self, line: str, ctx: RK800Context):
-        with ctx.queue_lock:
+        with ctx.commands_lock:
             self.id = RK800Cmd._next_id
             RK800Cmd._next_id += 1
         self.line = line

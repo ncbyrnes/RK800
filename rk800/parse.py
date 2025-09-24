@@ -1,5 +1,5 @@
 import argparse
-from typing import Any, Never
+from typing import Any, NoReturn
 from rk800.view import ViewManager
 
 try:
@@ -36,7 +36,7 @@ class CmdParser(argparse.ArgumentParser):
         self._print_message(self.format_help(), file)
         raise HelpShown()
 
-    def exit(self, status: int = 0, message: str = None) -> Never:
+    def exit(self, status: int = 0, message: str = None) -> NoReturn:
         """Handles exit calls from argparse."""
         if status == 0 and message:
             self._print_message(message)
@@ -44,7 +44,7 @@ class CmdParser(argparse.ArgumentParser):
         error_msg = message or "Invalid command or arguments provided."
         raise BadArgument(error_msg)
 
-    def error(self, message: str) -> Never:
+    def error(self, message: str) -> NoReturn:
         """Raises BadArgument for argument errors."""
         raise BadArgument(f"Argument error: {message}")
 
