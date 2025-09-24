@@ -10,23 +10,15 @@ class Result(RK800Cmd):
         self.target_id = None
 
     def parse(self):
-        parts = self.line.strip().split()[1:]
-
+        parts = self.line.strip().split()
+        
+        if len(parts) < 2 or parts[0] != "result":
+            raise ParseError(f"Invalid result command: {self.line}")
+        
         try:
-            parser = CmdParser(description="Show command results")
-            parser.view = self.ctx.view
-            parser.add_argument(
-                "-i",
-                "--id",
-                type=int,
-                required=True,
-                help="Command ID to show result for",
-            )
-
-            args = parser.parse_args(parts)
-            self.target_id = args.id
-        except (BadArgument, HelpShown) as e:
-            raise ParseError(f"Invalid result command syntax: {e}")
+            self.target_id = int(parts[1])
+        except ValueError:
+            raise ParseError(f"Invalid command ID: {parts[1]}")
 
         self.parsed = True
 
@@ -52,6 +44,6 @@ class Result(RK800Cmd):
         if cmd.output_cache:
             self.ctx.view.info("Output:")
             for output in cmd.output_cache:
-                print(f"  {output}")
+                self.ctx.view.info(f"  {output}")
         else:
             self.ctx.view.info("No output")
