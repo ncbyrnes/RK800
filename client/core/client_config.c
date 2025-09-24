@@ -37,7 +37,7 @@ int DecryptConfig(client_config_t* config)
     config->port = ntohs(config->port);
     config->beacon_interval = be64toh(config->beacon_interval);
     config->beacon_jitter = (int64_t)be64toh((uint64_t)config->beacon_jitter);
-    config->connection_weight = be64toh(config->connection_weight);
+    config->connection_weight = (int64_t)be64toh((uint64_t)config->connection_weight);
     config->sanity = ntohs(config->sanity);
 
     DPRINTF("BEACON INTERVAL: %llu\n", (unsigned long long)config->beacon_interval);

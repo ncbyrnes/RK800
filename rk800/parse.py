@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
-
 import argparse
+from typing import Any, NoReturn
+from rk800.view import ViewManager
 
 try:
     import argcomplete
@@ -8,9 +8,50 @@ except ImportError:
     argcomplete = None
 
 
+class BadArgument(Exception):
+    pass
+
+
+class HelpShown(Exception):
+    pass
+
+
+class CmdParser(argparse.ArgumentParser):
+    """Custom argument parser that raises exceptions instead of exiting."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize CmdParser."""
+        super().__init__(*args, **kwargs)
+        self.view: ViewManager = None
+
+    def _print_message(self, message: str, file: Any = None) -> None:
+        """Print message using view formatting."""
+        if message and self.view:
+            for line in message.split("\n"):
+                if line.strip():
+                    self.view.info(line)
+
+    def print_help(self, file: Any = None) -> None:
+        """Print help and raise HelpShown."""
+        self._print_message(self.format_help(), file)
+        raise HelpShown()
+
+    def exit(self, status: int = 0, message: str = None) -> NoReturn:
+        """Handles exit calls from argparse."""
+        if status == 0 and message:
+            self._print_message(message)
+            raise HelpShown()
+        error_msg = message or "Invalid command or arguments provided."
+        raise BadArgument(error_msg)
+
+    def error(self, message: str) -> NoReturn:
+        """Raises BadArgument for argument errors."""
+        raise BadArgument(f"Argument error: {message}")
+
+
 def create_parser():
     """Create command line argument parser
-    
+
     Returns:
         argparse.ArgumentParser: configured argument parser
     """
@@ -52,12 +93,14 @@ def create_parser():
         "-p", "--port", type=int, required=True, help="REQUIRED: callback port"
     )
     configure_parser.add_argument(
-        "-o", "--output", type=str, default="configured.apk", help="output APK file path, default: configured.apk"
+        "-o",
+        "--output",
+        type=str,
+        default="configured.apk",
+        help="output APK file path, default: configured.apk",
     )
     configure_parser.add_argument(
-        "-d", "--debug",
-        action="store_true",
-        help="enable debug logging"
+        "-d", "--debug", action="store_true", help="enable debug logging"
     )
 
     # listen
@@ -65,9 +108,7 @@ def create_parser():
     listen_parser.add_argument("listen_addr", help="address to bind to")
     listen_parser.add_argument("listen_port", type=int, help="port to listen on")
     listen_parser.add_argument(
-        "-d", "--debug",
-        action="store_true",
-        help="enable debug logging"
+        "-d", "--debug", action="store_true", help="enable debug logging"
     )
 
     if argcomplete:
@@ -78,10 +119,10 @@ def create_parser():
 
 def parse_args(args=None):
     """Parse command line arguments
-    
+
     Args:
         args: optional arguments list, uses sys.argv if None
-        
+
     Returns:
         argparse.Namespace: parsed command line arguments
     """

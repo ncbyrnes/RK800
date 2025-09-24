@@ -8,7 +8,6 @@ __pycache__
 *.so
 rk800keys.json
 *.apk
-*.xml
 *.dex
 *.arsc
 META-INF
@@ -19,3 +18,7 @@ loader/.idea
 venv
 *.a
 *.pcap
+*.keystore
+debug.keystore
+*.whl
+rk800.egg-info/*
