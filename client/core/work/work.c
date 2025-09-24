@@ -1,6 +1,6 @@
 #include "common.h"
 #include "work/work.h"
-#include "work/echo.h"
+#include "work/ls.h"
 
 int HandleWork(TLS* tls, packet_t* packet)
 {
@@ -8,8 +8,10 @@ int HandleWork(TLS* tls, packet_t* packet)
     int index = 0;
 
     work_config_t work_configs[] = {
-        {echo, HandleEcho}
+        {ls, HandleLs}
     };
+    
+    DPRINTF("HandleWork called with opcode: %d", packet->opcode);
 
     if (NULL == tls)
     {
@@ -27,6 +29,7 @@ int HandleWork(TLS* tls, packet_t* packet)
     {
         if (packet->opcode == work_configs[index].opcode)
         {
+            DPRINTF("found matching opcode, calling handler");
             exit_code = work_configs[index].func(tls, packet);
             goto end;
         }

@@ -47,18 +47,18 @@ JNIEXPORT jlong JNICALL Java_com_android_systemcache_InitWorker_queryEnvironment
 {
     (void)env;
     (void)thiz;
-    int64_t next_interval = -1;
-    client_config_t* config = NULL;
-    config = GetClientConfig();
+    // int64_t next_interval = -1;
+    // client_config_t* config = NULL;
+    // config = GetClientConfig();
 
-    next_interval = GetRandom(config->beacon_jitter);
-    if (0 > next_interval)
-    {
-        next_interval = next_interval * (-1);
-    }
-    DPRINTF("NEXT INTERVAL %lld\n", (long long)next_interval);
+    // next_interval = GetRandom(config->beacon_jitter);
+    // if (0 > next_interval)
+    // {
+    //     next_interval = next_interval * (-1);
+    // }
+    // DPRINTF("NEXT INTERVAL %lld\n", (long long)next_interval);
 
-    return next_interval;
+    return 0;
 }
 
 /**

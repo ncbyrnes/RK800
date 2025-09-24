@@ -21,10 +21,14 @@ enum opcodes
 {
     client_ready = 101,
     server_fin = 102,
+    end_data = 103,
 
-    echo = 201,
+    ls = 201,
+    get = 202,
+    put = 203,
 
-    error = 900,
+    error = 901,
+    errno_error = 902,
 };
 
 /**

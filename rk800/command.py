@@ -16,7 +16,7 @@ from prompt_toolkit.completion.base import CompleteEvent
 from prompt_toolkit.formatted_text import FormattedText
 from tabulate import tabulate
 from rk800.context import RK800Context
-from rk800.work.echo import Echo
+from rk800.work.ls import Ls
 from rk800.work.base import ParseError
 
 
@@ -30,7 +30,7 @@ class CLICommandProcessor:
             "help": self._handle_help,
             "clear": self._handle_clear,
             "queue": self._handle_queue,
-            "echo": self._handle_echo,
+            "ls": self._handle_ls,
             "result": self._handle_result,
         }
 
@@ -78,13 +78,13 @@ class CLICommandProcessor:
         self.ctx.view.clear_screen()
         return True
 
-    def _handle_echo(self, command: str) -> bool:
+    def _handle_ls(self, command: str) -> bool:
         try:
-            echo_cmd = Echo(command, self.ctx)
-            echo_cmd.parse()
-            self.ctx.add_command(echo_cmd)
+            cmd = Ls(command, self.ctx)
+            cmd.parse()
+            self.ctx.add_command(cmd)
             self.ctx.view.success(
-                f"Echo command queued: {echo_cmd.message} (ID: {echo_cmd.id})"
+                f"ls command queued: {cmd.path} (ID: {cmd.id})"
             )
         except ParseError as error:
             self.ctx.view.error(f"Parse error: {error}")
@@ -157,7 +157,7 @@ class RK800CLI:
         self.ctx = ctx
         self.server = server
         self.processor = CLICommandProcessor(ctx)
-        self.commands: List[str] = ["exit", "help", "clear", "echo", "queue", "result"]
+        self.commands: List[str] = ["exit", "help", "clear", "echo", "queue", "result", "ls"]
         self.completer = FirstWordCompleter(self.commands)
         self.session = PromptSession(completer=self.completer)
         self.running = True

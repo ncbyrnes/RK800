@@ -18,7 +18,9 @@ int StartClient(client_config_t* config)
     int exit_code = EXIT_FAILURE;
     int sock = -1;
     TLS* tls_conn = NULL;
-    const int time_out = 3;
+    const int time_out = 10;
+    
+    DPRINTF("StartClient called");
 
     if (NULL == config)
     {
@@ -44,6 +46,7 @@ int StartClient(client_config_t* config)
 
     DPRINTF("STARTING CLIENT LOOP\n");
 
+    DPRINTF("calling ClientLoop");
     if (ClientLoop(config, tls_conn))
     {
         DPRINTF("Client loop failed!\n");
@@ -69,6 +72,8 @@ static int ClientLoop(client_config_t* config, TLS* tls)
     packet_t* packet = NULL;
     int request_result = 0;
 
+    DPRINTF("ClientLoop called");
+
     if (NULL == config)
     {
         DPRINTF("config can not be NULL");
@@ -83,9 +88,11 @@ static int ClientLoop(client_config_t* config, TLS* tls)
 
     connection_weight = config->connection_weight;
 
+    DPRINTF("entering client loop");
     do
     {
         packet = NULL;
+        DPRINTF("waiting for request");
         request_result = GetRequest(tls, &packet);
 
         if (request_result == SERVER_DISCONNECT)
@@ -100,6 +107,7 @@ static int ClientLoop(client_config_t* config, TLS* tls)
             break;
         }
 
+        DPRINTF("got packet, calling HandleWork");
         if (HandleWork(tls, packet))
         {
             DPRINTF("HandleWork failed");

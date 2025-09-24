@@ -1,5 +1,6 @@
 target_sources(${CLIENT}
     PRIVATE
         work.c
-        echo.c
-)
+        ls.c
+        error.c)
+        

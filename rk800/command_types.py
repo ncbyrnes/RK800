@@ -7,10 +7,12 @@ from typing import Dict, Union
 class Opcode(IntEnum):
     CLIENT_READY = 101
     SERVER_FIN = 102
+    END_DATA = 103
     
-    ECHO = 201
+    LS = 201
     
-    ERROR = 900
+    ERROR = 901
+    ERRNO_ERROR = 902
 
 
 @dataclass
