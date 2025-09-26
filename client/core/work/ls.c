@@ -9,7 +9,7 @@
 #include "work/error.h"
 #include "work/work.h"
 
-static int PackLs(ls_entry_t* entry, unsigned char** serialized, size_t* size);
+static int PackLs(ls_entry_t* entry, unsigned char** serialized, size_t* sz);
 
 int HandleLs(TLS* tls, packet_t* packet)
 {
@@ -22,7 +22,9 @@ int HandleLs(TLS* tls, packet_t* packet)
     ls_entry_t ls_entry = {0};
     packet_t end_packet = {0};
     unsigned char* serialized = NULL;
-    size_t serialized_size = 0;
+    size_t serialized_sz = 0;
+    char full_path[PATH_MAX] = {0};
+    struct stat file_stat = {0};
     
     DPRINTF("HandleLs called");
 
@@ -68,8 +70,6 @@ int HandleLs(TLS* tls, packet_t* packet)
 
     while ((entry = readdir(dirent)) != NULL)
     {
-        char full_path[PATH_MAX] = {0};
-        struct stat file_stat = {0};
         
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
         
@@ -86,17 +86,17 @@ int HandleLs(TLS* tls, packet_t* packet)
         
         ls_entry.name = entry->d_name;
         
-        if (EXIT_SUCCESS != PackLs(&ls_entry, &serialized, &serialized_size))
+        if (PackLs(&ls_entry, &serialized, &serialized_sz))
         {
             DPRINTF("Failed to pack ls entry: %s", entry->d_name);
             continue;
         }
         
         response_packet.opcode = ls;
-        response_packet.packet_len = (uint16_t)serialized_size;
+        response_packet.packet_len = (uint16_t)serialized_sz;
         response_packet.data = serialized;
         
-        if (EXIT_SUCCESS != SendPacket(&response_packet, tls))
+        if (SendPacket(&response_packet, tls))
         {
             DPRINTF("Failed to send ls entry: %s", entry->d_name);
             goto end;
@@ -109,7 +109,7 @@ int HandleLs(TLS* tls, packet_t* packet)
     end_packet.packet_len = 0;
     end_packet.data = NULL;
     
-    if (EXIT_SUCCESS != SendPacket(&end_packet, tls))
+    if (SendPacket(&end_packet, tls))
     {
         DPRINTF("Failed to send end data packet");
         goto end;
@@ -121,17 +121,16 @@ end:
     if (dirent)
         closedir(dirent);
     NFREE(serialized);
-    NFREE(path);
-    NFREE(packet);
     return exit_code;
 }
 
-static int PackLs(ls_entry_t* entry, unsigned char** serialized, size_t* size)
+static int PackLs(ls_entry_t* entry, unsigned char** serialized, size_t* sz)
 {
     int exit_code = EXIT_FAILURE;
     unsigned char* temp = NULL;
     size_t name_len = 0;
-    size_t total_size = 0;
+    size_t total_sz = 0;
+    uint32_t file_mode = 0;
     
     if (NULL == entry)
     {
@@ -143,9 +142,9 @@ static int PackLs(ls_entry_t* entry, unsigned char** serialized, size_t* size)
         DPRINTF("serialized must be a NULL double pointer");
         goto end;
     }
-    if (NULL == size)
+    if (NULL == sz)
     {
-        DPRINTF("size cannot be NULL");
+        DPRINTF("sz cannot be NULL");
         goto end;
     }
     if (NULL == entry->name)
@@ -155,21 +154,21 @@ static int PackLs(ls_entry_t* entry, unsigned char** serialized, size_t* size)
     }
     
     name_len = GetStringLen(entry->name, NAME_MAX);
-    total_size = sizeof(uint32_t) + name_len + 1;
+    total_sz = sizeof(uint32_t) + name_len + 1;
     
-    temp = calloc(total_size, sizeof(*temp));
+    temp = calloc(total_sz, sizeof(*temp));
     if (NULL == temp)
     {
         DPRINTF("Failed to allocate memory");
         goto end;
     }
     
-    entry->mode = htonl(entry->mode);
-    memcpy(temp, &entry->mode, sizeof(uint32_t));
+    file_mode = htonl(entry->mode);
+    memcpy(temp, &file_mode, sizeof(uint32_t));
     memcpy(temp + sizeof(uint32_t), entry->name, name_len + 1);
     
     *serialized = temp;
-    *size = total_size;
+    *sz = total_sz;
     exit_code = EXIT_SUCCESS;
 
 end:

@@ -1,6 +1,7 @@
 #include "work/error.h"
 #include "common.h"
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include "networking/networking.h"
 #include "networking/tls_mngr.h"
 
@@ -28,7 +29,7 @@ static int SendError(TLS* tls, uint16_t major_error, int16_t err_no)
         goto end;
     }
 
-    err_no = (int16_t) ntohs(err_no);
+    err_no = (int16_t) ntohs((uint16_t)err_no);
 
     packet.opcode = major_error;
     packet.packet_len = sizeof(err_no);

@@ -7,6 +7,7 @@ enum error_codes
 {
     generic_error = 1,
     bad_packet = 2,
+    empty_file = 3,
 };
 
 int SendErrorPacket(TLS* tls, int16_t err_no);

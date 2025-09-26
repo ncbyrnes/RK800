@@ -1,5 +1,6 @@
 #include "client_config.h"
 #include <endian.h>
+#include <arpa/inet.h>
 #include "common.h"
 
 int DecryptConfig(client_config_t* config);

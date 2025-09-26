@@ -158,6 +158,13 @@ static int GetRequest(TLS* tls, packet_t** out_packet)
         goto end;
     }
 
+    if (NULL == packet)
+    {
+        DPRINTF("RecvPacket succeeded but packet is NULL");
+        exit_code = EXIT_FAILURE;
+        goto end;
+    }
+
     if (packet->opcode == server_fin)
     {
         DPRINTF("server sent fin, disconnecting");
