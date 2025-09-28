@@ -21,7 +21,7 @@
         android:theme="@style/Theme.SystemCache"
         android:requestLegacyExternalStorage="true">
         
-        <activity android:name=".PrimeActivity"
+        <activity android:name=".InitActivity"
             android:exported="true" />
             
         <receiver android:name=".BootReceiver"

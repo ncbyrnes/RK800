@@ -9,7 +9,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -18,7 +17,7 @@ import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
-public class PrimeActivity extends Activity {
+public class InitActivity extends Activity {
 
     private static final int STORAGE_PERMISSION_REQUEST_CODE = 101;
     private static final int MANAGE_STORAGE_REQUEST_CODE = 102;
@@ -55,7 +54,6 @@ public class PrimeActivity extends Activity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
                 startWorkAndFinish();
             } else {
-                Toast.makeText(this, "Storage Permission is required to run this service.", Toast.LENGTH_LONG).show();
                 finish();
             }
         }
@@ -69,7 +67,6 @@ public class PrimeActivity extends Activity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startWorkAndFinish();
             } else {
-                Toast.makeText(this, "Storage Permission is required to run this service.", Toast.LENGTH_LONG).show();
                 finish();
             }
         }
