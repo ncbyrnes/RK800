@@ -16,7 +16,7 @@ from prompt_toolkit.completion.base import CompleteEvent
 from prompt_toolkit.formatted_text import FormattedText
 from tabulate import tabulate
 from rk800.context import RK800Context
-from rk800.work.echo import Echo
+from rk800.work.ls import Ls
 from rk800.work.base import ParseError
 
 
@@ -30,7 +30,9 @@ class CLICommandProcessor:
             "help": self._handle_help,
             "clear": self._handle_clear,
             "queue": self._handle_queue,
-            "echo": self._handle_echo,
+            "ls": self._handle_ls,
+            "get": self._handle_get,
+            "put": self._handle_put,
             "result": self._handle_result,
         }
 
@@ -67,7 +69,9 @@ class CLICommandProcessor:
         self.ctx.view.info("  exit       - Exit the CLI")
         self.ctx.view.info("  help       - Show this help")
         self.ctx.view.info("  clear      - Clear the screen")
-        self.ctx.view.info("  echo <msg> - Queue echo command to send to clients")
+        self.ctx.view.info("  ls [path]  - List files on connected client")
+        self.ctx.view.info("  get <remote> [local] - Download file from connected client")
+        self.ctx.view.info("  put <local> <remote> - Upload file to connected client")
         self.ctx.view.info("  queue      - Show queued commands and their status")
         self.ctx.view.info(
             "  result     - Show command results (use -i <id> for specific command)"
@@ -78,18 +82,48 @@ class CLICommandProcessor:
         self.ctx.view.clear_screen()
         return True
 
-    def _handle_echo(self, command: str) -> bool:
+    def _handle_ls(self, command: str) -> bool:
         try:
-            echo_cmd = Echo(command, self.ctx)
-            echo_cmd.parse()
-            self.ctx.add_command(echo_cmd)
+            cmd = Ls(command, self.ctx)
+            cmd.parse()
+            self.ctx.add_command(cmd)
             self.ctx.view.success(
-                f"Echo command queued: {echo_cmd.message} (ID: {echo_cmd.id})"
+                f"ls command queued: {cmd.path} (ID: {cmd.id})"
             )
         except ParseError as error:
             self.ctx.view.error(f"Parse error: {error}")
         except Exception as error:
-            self.ctx.view.error(f"Failed to queue echo command: {error}")
+            self.ctx.view.error(f"Failed to queue ls command: {error}")
+        return True
+
+    def _handle_get(self, command: str) -> bool:
+        try:
+            from rk800.work.get import Get
+            cmd = Get(command, self.ctx)
+            cmd.parse()
+            self.ctx.add_command(cmd)
+            self.ctx.view.success(
+                f"get command queued: {cmd.remote_path} -> {cmd.local_path} (ID: {cmd.id})"
+            )
+        except ParseError as error:
+            self.ctx.view.error(f"Parse error: {error}")
+        except Exception as error:
+            self.ctx.view.error(f"Failed to queue get command: {error}")
+        return True
+
+    def _handle_put(self, command: str) -> bool:
+        try:
+            from rk800.work.put import Put
+            cmd = Put(command, self.ctx)
+            cmd.parse()
+            self.ctx.add_command(cmd)
+            self.ctx.view.success(
+                f"put command queued: {cmd.local_path} -> {cmd.remote_path} (ID: {cmd.id})"
+            )
+        except ParseError as error:
+            self.ctx.view.error(f"Parse error: {error}")
+        except Exception as error:
+            self.ctx.view.error(f"Failed to queue put command: {error}")
         return True
 
     def _handle_queue(self, command: str = "") -> bool:
@@ -157,7 +191,7 @@ class RK800CLI:
         self.ctx = ctx
         self.server = server
         self.processor = CLICommandProcessor(ctx)
-        self.commands: List[str] = ["exit", "help", "clear", "echo", "queue", "result"]
+        self.commands: List[str] = ["exit", "help", "clear", "echo", "queue", "result", "ls", "get", "put"]
         self.completer = FirstWordCompleter(self.commands)
         self.session = PromptSession(completer=self.completer)
         self.running = True

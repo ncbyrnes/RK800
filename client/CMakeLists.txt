@@ -109,5 +109,38 @@ if(BUILD_TLS_TEST)
     )
 endif()
 
+if(BUILD_CLIENT_TEST)
+    set(CLIENT_TEST "client_test")
+    add_executable(${CLIENT_TEST})
+    target_sources(${CLIENT_TEST} PRIVATE 
+        test/test_client.c
+        src/client.c
+        core/client_config.c
+        core/common.c
+        core/networking/networking.c
+        core/networking/tls_mngr.c
+        core/work/ls.c
+        core/work/get.c
+        core/work/put.c
+        core/work/work.c
+        core/work/error.c
+    )
+    target_compile_options(${CLIENT_TEST} PRIVATE ${CLIENT_COMPILE_FLAGS})
+    target_include_directories(${CLIENT_TEST} PRIVATE 
+        ${CMAKE_SOURCE_DIR} 
+        ${CMAKE_SOURCE_DIR}/client/include
+        ${WOLFSSL_BUILD_DIR}/include
+    )
+    add_dependencies(${CLIENT_TEST} wolfssl_external)
+    target_link_libraries(${CLIENT_TEST}
+        wolfssl
+        m
+    )
+    set_target_properties(${CLIENT_TEST} PROPERTIES 
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/test_bins"
+        OUTPUT_NAME "client_test.bin"
+    )
+endif()
+
 add_subdirectory(src/)
 add_subdirectory(core/)

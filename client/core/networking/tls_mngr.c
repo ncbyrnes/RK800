@@ -143,7 +143,6 @@ void TLSShutdown(TLS* tls)
     if (NULL != tls)
     {
         cleanup_tls(tls);
-        NFREE(tls);
     }
     wolfSSL_Cleanup();
 }
