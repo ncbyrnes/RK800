@@ -28,9 +28,10 @@ class RK800Cmd(ABC):
     """Base class for RK800 commands"""
 
     _next_id = 1
+    _id_lock = threading.Lock()
 
     def __init__(self, line: str, ctx: RK800Context):
-        with ctx.commands_lock:
+        with RK800Cmd._id_lock:
             self.id = RK800Cmd._next_id
             RK800Cmd._next_id += 1
         self.line = line

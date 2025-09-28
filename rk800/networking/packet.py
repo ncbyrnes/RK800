@@ -1,10 +1,10 @@
 import ssl
 import socket
 import struct
+from rk800.command_types import Opcode
+from rk800.work.error import handle_error_packet
 
 PACKET_HEADER_SIZE = 4
-OPCODE_SIZE = 2
-PACKET_LENGTH_SIZE = 2
 MAX_PACKET_SIZE = 0xFFFF
 
 
@@ -23,6 +23,11 @@ class Packet:
             opcode (int): packet operation code
             data (bytes): packet payload data
         """
+        if not isinstance(data, bytes):
+            raise TypeError("data must be bytes")
+        if len(data) > MAX_PACKET_SIZE:
+            raise ValueError(f"data size {len(data)} exceeds maximum {MAX_PACKET_SIZE}")
+        
         self.opcode = opcode
         self.data = data
         self.packet_len = len(data)
@@ -39,16 +44,24 @@ class Packet:
 
         Raises:
             ConnectionResetError: If connection is closed before all data received
+            ValueError: If size is invalid
         """
-        data = b""
-        while len(data) < size:
-            chunk = sock.recv(size - len(data))
+        if size < 0:
+            raise ValueError("size cannot be negative")
+        if size > MAX_PACKET_SIZE:
+            raise ValueError(f"size {size} exceeds maximum {MAX_PACKET_SIZE}")
+        
+        chunks = []
+        bytes_received = 0
+        while bytes_received < size:
+            chunk = sock.recv(size - bytes_received)
             if not chunk:
                 raise ConnectionResetError(
-                    f"Connection closed while receiving data (got {len(data)}/{size} bytes)"
+                    f"Connection closed while receiving data (got {bytes_received}/{size} bytes)"
                 )
-            data += chunk
-        return data
+            chunks.append(chunk)
+            bytes_received += len(chunk)
+        return b"".join(chunks)
 
     def recv(self, ssl_socket: ssl.SSLSocket) -> bool:
         """Receive packet from socket
@@ -57,7 +70,7 @@ class Packet:
             ssl_socket (ssl.SSLSocket): SSL socket to receive from
 
         Returns:
-            bool: True if packet received successfully, False otherwise
+            bool: True if packet received successfully, False if error packet
 
         Raises:
             ValueError: If packet size exceeds maximum allowed
@@ -79,19 +92,25 @@ class Packet:
             else:
                 self.data = b""
 
+            if self.opcode == Opcode.ERROR or self.opcode == Opcode.ERRNO_ERROR:
+                return False
+
             return True
 
         except (ssl.SSLError, socket.timeout, OSError, ConnectionResetError) as error:
             raise type(error)(f"Error receiving packet: {error}") from error
 
-    def send(self, ssl_socket: ssl.SSLSocket) -> bool:
+    def get_error_msg(self) -> str:
+        """get error message from error packet"""
+        error_msg, _ = handle_error_packet(self)
+        return error_msg or ""
+
+
+    def send(self, ssl_socket: ssl.SSLSocket) -> None:
         """Send packet to socket
 
         Args:
             ssl_socket (ssl.SSLSocket): SSL socket to send to
-
-        Returns:
-            bool: True if packet sent successfully, False otherwise
 
         Raises:
             ValueError: If packet size exceeds maximum allowed
@@ -104,16 +123,15 @@ class Packet:
                 f"Packet size {self.packet_len} exceeds maximum {MAX_PACKET_SIZE}"
             )
 
-        try:
-            header = struct.pack("!HH", self.opcode, self.packet_len)
-            packet_data = header + self.data
+        header = struct.pack("!HH", self.opcode, self.packet_len)
+        packet_data = header + self.data
 
-            total_sent = 0
-            while total_sent < len(packet_data):
+        total_sent = 0
+        while total_sent < len(packet_data):
+            try:
                 bytes_sent = ssl_socket.send(packet_data[total_sent:])
                 if bytes_sent == 0:
                     raise ConnectionResetError("Connection closed while sending packet")
                 total_sent += bytes_sent
-            return True
-        except (ssl.SSLError, socket.timeout, OSError) as error:
-            raise type(error)(f"Error sending packet: {error}") from error
+            except (ssl.SSLError, socket.timeout, OSError) as error:
+                raise type(error)(f"Error sending packet: {error}") from error

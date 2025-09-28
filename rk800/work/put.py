@@ -5,6 +5,8 @@ from rk800.command_types import Opcode
 from rk800.work.error import handle_error_packet
 from pathlib import Path
 
+CHUNK_SIZE = 4096
+
 
 class Put(RK800Cmd):
 
@@ -20,12 +22,15 @@ class Put(RK800Cmd):
         if len(parts) < 2 or parts[0].lower() != "put":
             raise ParseError(f"Invalid put command: {self.line}")
 
-        self.local_path = parts[1]
-        
-        if len(parts) >= 3:
-            self.remote_path = parts[2]
-        else:
-            self.remote_path = Path(self.local_path).name
+        try:
+            self.local_path = str(Path(parts[1]).resolve())
+            
+            if len(parts) >= 3:
+                self.remote_path = parts[2]
+            else:
+                self.remote_path = Path(self.local_path).name
+        except (OSError, ValueError) as error:
+            raise ParseError(f"invalid path: {error}")
             
         self.parsed = True
 
@@ -52,9 +57,8 @@ class Put(RK800Cmd):
         
         try:
             with local_file.open('rb') as input_file:
-                chunk_size = 4096
                 while True:
-                    chunk = input_file.read(chunk_size)
+                    chunk = input_file.read(CHUNK_SIZE)
                     if not chunk:
                         break
                     
@@ -67,11 +71,8 @@ class Put(RK800Cmd):
                 end_pkt.send(self.ctx.current_client)
                 
                 recv_pkt = Packet()
-                recv_pkt.recv(self.ctx.current_client)
-                
-                error_msg, should_break = handle_error_packet(recv_pkt)
-                if error_msg:
-                    self.output_cache.append(error_msg)
+                if not recv_pkt.recv(self.ctx.current_client):
+                    self.output_cache.append(recv_pkt.get_error_msg())
                     self.result = CommandResults.ERROR
                 elif recv_pkt.opcode == Opcode.COMMAND_COMPLETE:
                     self.result = CommandResults.SUCCESS

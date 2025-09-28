@@ -38,11 +38,8 @@ class Ls(RK800Cmd):
         
         while True:
             recv_pkt = Packet()
-            recv_pkt.recv(self.ctx.current_client)
-            
-            error_msg, should_break = handle_error_packet(recv_pkt)
-            if error_msg:
-                self.output_cache.append(error_msg)
+            if not recv_pkt.recv(self.ctx.current_client):
+                self.output_cache.append(recv_pkt.get_error_msg())
                 self.result = CommandResults.ERROR
                 break
             elif recv_pkt.opcode == Opcode.LS:

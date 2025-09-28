@@ -4,6 +4,7 @@ from rk800.networking.packet import Packet
 from rk800.command_types import Opcode
 from rk800.work.error import handle_error_packet
 from pathlib import Path
+import os
 
 
 class Get(RK800Cmd):
@@ -22,10 +23,13 @@ class Get(RK800Cmd):
 
         self.remote_path = parts[1]
         
-        if len(parts) >= 3:
-            self.local_path = parts[2]
-        else:
-            self.local_path = Path(self.remote_path).name
+        try:
+            if len(parts) >= 3:
+                self.local_path = str(Path(parts[2]).resolve())
+            else:
+                self.local_path = str(Path(self.remote_path).name)
+        except (OSError, ValueError) as error:
+            raise ParseError(f"invalid path: {error}")
             
         self.parsed = True
 
@@ -42,11 +46,8 @@ class Get(RK800Cmd):
             with Path(self.local_path).open('wb') as output_file:
                 while True:
                     recv_pkt = Packet()
-                    recv_pkt.recv(self.ctx.current_client)
-                    
-                    error_msg, should_break = handle_error_packet(recv_pkt)
-                    if error_msg:
-                        self.output_cache.append(error_msg)
+                    if not recv_pkt.recv(self.ctx.current_client):
+                        self.output_cache.append(recv_pkt.get_error_msg())
                         self.result = CommandResults.ERROR
                         break
                     elif recv_pkt.opcode == Opcode.GET_DATA:
